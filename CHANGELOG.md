@@ -15,3 +15,6 @@ reaches its first release.
 - Go engine module bootstrap: the `syncyd` daemon entry point and a
   `buildinfo` package (with tests). CI now builds and tests the engine on
   Windows, macOS and Linux, running the race detector on Linux.
+- `hashing` package: SHA-256 content identifiers (`Hash`) with helpers to hash
+  bytes, strings, readers and files, plus hex parsing and text marshalling for
+  storage. Verified against known SHA-256 test vectors.
