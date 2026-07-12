@@ -49,6 +49,10 @@ reaches its first release.
   mutual-TLS configs that authenticate peers by pinning their device ID.
 - Desktop application scaffold (`desktop/`): Tauri 2 shell with a React +
   TypeScript front-end and a dark, minimal window.
+- Desktop bundles the `syncyd` engine as a **Tauri sidecar**: a build script
+  compiles the Go daemon for the host target triple, the app spawns it on
+  startup pointing at a per-user data directory, and a `daemon_info` command
+  exposes the local control API base URL and token to the front-end.
 - `transport` package: authenticated QUIC transport (quic-go) built on the
   device identity's mutual-TLS configs. Connections expose the peer's device ID
   and multiplexed streams. Tested with a loopback handshake, peer-ID
