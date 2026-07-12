@@ -161,3 +161,9 @@ reaches its first release.
 - Control API gained AI routes: read/save the provider config (the API key is
   never returned and is kept across saves), test a connection, explain a
   conflict, and analyze logs. Config is persisted to `ai.json` in the data dir.
+- Desktop Settings → Integrations now configures the AI assistant against the
+  engine: an enable toggle, a provider picker (OpenAI, Anthropic, Gemini,
+  OpenRouter, Ollama, LM Studio, custom), model and optional base URL, a
+  password key field that shows "saved" without echoing the key, and a Test
+  Connection button. The Conflicts screen gained a per-file **Explain** action
+  that asks the assistant why a file conflicts and how to resolve it.
