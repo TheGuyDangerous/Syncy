@@ -80,6 +80,10 @@ reaches its first release.
   (persisted in the metadata store), and `Converge`, which serves the local
   folder while pulling the peer's so two devices bidirectionally reach the union
   of their newest files. Verified with a two-node convergence integration test.
+- Conflict handling in the sync session (`WithBaseline` + `WithConflictNaming`):
+  when both sides changed a file since the last sync, the incoming version is
+  written as a `.sync-conflict-…` copy instead of overwriting local changes; a
+  file only changed on one side fast-forwards, and a locally-ahead file is kept.
 - Release pipeline now builds **native installers** with Tauri for Windows
   (NSIS/MSI), macOS (`.dmg`) and Linux (`.deb`/`.AppImage`) and attaches them to
   the GitHub pre-release, replacing the earlier raw engine archives.

@@ -11,6 +11,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"time"
+
+	"github.com/TheGuyDangerous/Syncy/engine/internal/conflict"
+	"github.com/TheGuyDangerous/Syncy/engine/internal/core"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/hashing"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/protocol"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/scanner"
@@ -28,6 +32,8 @@ type Folder struct {
 
 type config struct {
 	versions *versioning.Store
+	baseline map[string]hashing.Hash
+	localID  core.DeviceID
 }
 
 type Option func(*config)
@@ -36,10 +42,19 @@ func WithVersioning(store *versioning.Store) Option {
 	return func(c *config) { c.versions = store }
 }
 
+func WithBaseline(baseline map[string]hashing.Hash) Option {
+	return func(c *config) { c.baseline = baseline }
+}
+
+func WithConflictNaming(localID core.DeviceID) Option {
+	return func(c *config) { c.localID = localID }
+}
+
 type Stats struct {
 	FilesUpdated  int
 	BlocksFetched int
 	BlocksReused  int
+	Conflicts     int
 }
 
 func Serve(ctx context.Context, conn *transport.Conn, folder Folder) error {
@@ -107,15 +122,48 @@ func Pull(ctx context.Context, conn *transport.Conn, folderID, destDir string, l
 		if rf.Deleted {
 			continue
 		}
-		if lf, ok := local.Files[rf.Path]; ok && lf.Hash == rf.Hash {
+		lf, hasLocal := local.Files[rf.Path]
+		if hasLocal && lf.Hash == rf.Hash {
 			continue
 		}
-		if err := pullFile(ctx, conn, folderID, destDir, rf, localBlocks, &cfg, &stats); err != nil {
+
+		target := rf.Path
+		if hasLocal && cfg.baseline != nil {
+			switch classify(lf.Hash, rf.Hash, cfg.baseline[rf.Path]) {
+			case keepLocal:
+				continue
+			case conflictCopy:
+				target = conflict.ConflictName(rf.Path, cfg.localID, time.Now())
+				stats.Conflicts++
+			}
+		}
+
+		if err := pullFile(ctx, conn, folderID, destDir, rf, target, localBlocks, &cfg, &stats); err != nil {
 			return stats, err
 		}
 		stats.FilesUpdated++
 	}
 	return stats, nil
+}
+
+type resolution int
+
+const (
+	takeRemote resolution = iota
+	keepLocal
+	conflictCopy
+)
+
+func classify(local, remote, baseline hashing.Hash) resolution {
+	if !baseline.IsZero() {
+		if local == baseline {
+			return takeRemote
+		}
+		if remote == baseline {
+			return keepLocal
+		}
+	}
+	return conflictCopy
 }
 
 type blockLoc struct {
@@ -208,7 +256,7 @@ func requestBlocks(ctx context.Context, conn *transport.Conn, folderID, path str
 	return out, nil
 }
 
-func pullFile(ctx context.Context, conn *transport.Conn, folderID, destDir string, rf protocol.FileMeta, localBlocks map[hashing.Hash]blockLoc, cfg *config, stats *Stats) error {
+func pullFile(ctx context.Context, conn *transport.Conn, folderID, destDir string, rf protocol.FileMeta, targetRel string, localBlocks map[hashing.Hash]blockLoc, cfg *config, stats *Stats) error {
 	var need []protocol.BlockRef
 	for _, b := range rf.Blocks {
 		if _, ok := localBlocks[b.Hash]; !ok {
@@ -225,7 +273,7 @@ func pullFile(ctx context.Context, conn *transport.Conn, folderID, destDir strin
 		}
 	}
 
-	destPath := filepath.Join(destDir, filepath.FromSlash(rf.Path))
+	destPath := filepath.Join(destDir, filepath.FromSlash(targetRel))
 	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
 		return err
 	}
@@ -277,7 +325,7 @@ func pullFile(ctx context.Context, conn *transport.Conn, folderID, destDir strin
 
 	if cfg.versions != nil {
 		if _, err := os.Stat(destPath); err == nil {
-			if err := cfg.versions.Archive(destDir, rf.Path); err != nil {
+			if err := cfg.versions.Archive(destDir, targetRel); err != nil {
 				os.Remove(tmpPath)
 				return err
 			}
