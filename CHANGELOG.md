@@ -93,6 +93,9 @@ reaches its first release.
   exposing status, folder management (list / add / remove), devices, conflicts
   and per-file version history — the surface the desktop and mobile clients
   drive. Includes `Engine.Conflicts` and `Engine.FolderVersions`.
+- `discovery` package: LAN‑first device discovery over mDNS / DNS‑SD — a device
+  advertises its ID and QUIC port and browses for peers, so devices find each
+  other with no configuration.
 - Release pipeline now builds **native installers** with Tauri for Windows
   (NSIS/MSI), macOS (`.dmg`) and Linux (`.deb`/`.AppImage`) and attaches them to
   the GitHub pre-release, replacing the earlier raw engine archives.
