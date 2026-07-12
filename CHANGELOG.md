@@ -36,3 +36,6 @@ reaches its first release.
   relative and slash-separated for cross-platform consistency; supports a skip
   predicate for ignore rules. Tested for correctness, determinism, empty files,
   skipping and error paths.
+- `scanner.Diff`: compares two indexes into a deterministic change set
+  (added / modified / deleted) and detects renames and moves by matching
+  identical non-empty content, so a moved file transfers no data.
