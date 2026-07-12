@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 
-use tauri::Manager;
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::{Manager, WindowEvent};
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
@@ -33,27 +35,76 @@ fn engine_dir(app: &tauri::AppHandle) -> Result<PathBuf, Box<dyn std::error::Err
     Ok(dir)
 }
 
+fn show_main(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
+fn spawn_engine(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+    let dir = engine_dir(app)?;
+    let (mut rx, child) = app
+        .shell()
+        .sidecar("syncyd")?
+        .args(["--data-dir", &dir.to_string_lossy(), "--api", API_ADDR])
+        .spawn()?;
+    tauri::async_runtime::spawn(async move {
+        let _child = child;
+        while let Some(event) = rx.recv().await {
+            if matches!(event, CommandEvent::Terminated(_)) {
+                break;
+            }
+        }
+    });
+    Ok(())
+}
+
+fn build_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
+    let open = MenuItem::with_id(app, "open", "Open Syncy", true, None::<&str>)?;
+    let sep = PredefinedMenuItem::separator(app)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit Syncy", true, None::<&str>)?;
+    let menu = Menu::with_items(app, &[&open, &sep, &quit])?;
+
+    TrayIconBuilder::with_id("main")
+        .icon(app.default_window_icon().unwrap().clone())
+        .tooltip("Syncy")
+        .menu(&menu)
+        .show_menu_on_left_click(false)
+        .on_menu_event(|app, event| match event.id.as_ref() {
+            "open" => show_main(app),
+            "quit" => app.exit(0),
+            _ => {}
+        })
+        .on_tray_icon_event(|tray, event| {
+            if let TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } = event
+            {
+                show_main(tray.app_handle());
+            }
+        })
+        .build(app)?;
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            let dir = engine_dir(app.handle())?;
-            let (mut rx, child) = app
-                .shell()
-                .sidecar("syncyd")?
-                .args(["--data-dir", &dir.to_string_lossy(), "--api", API_ADDR])
-                .spawn()?;
-            tauri::async_runtime::spawn(async move {
-                let _child = child;
-                while let Some(event) = rx.recv().await {
-                    if matches!(event, CommandEvent::Terminated(_)) {
-                        break;
-                    }
-                }
-            });
+            spawn_engine(app.handle())?;
+            build_tray(app.handle())?;
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event {
+                let _ = window.hide();
+                api.prevent_close();
+            }
         })
         .invoke_handler(tauri::generate_handler![app_version, daemon_info])
         .run(tauri::generate_context!())
