@@ -4,13 +4,13 @@ Syncy is built in vertical milestones. Each milestone is implemented, tested, do
 
 Legend: ✅ done · 🚧 in progress · ⬜ planned
 
-## M0 — Repository foundation 🚧
-Project scaffolding: README, architecture, license, contribution & security docs, CI skeleton, issue/PR templates.
+## M0 — Repository foundation ✅
+Project scaffolding: README, architecture, license, contribution & security docs, CI skeleton, issue/PR templates. Cross‑OS CI is green.
 
-## M1 — Engine core ⬜
-Go module; SHA‑256 hashing; content‑defined chunking for block‑level delta sync; SQLite metadata store (folders, files, blocks, devices). Thorough unit tests.
+## M1 — Engine core ✅
+Go module and `syncyd` skeleton; SHA‑256 content identifiers (`hashing`); deterministic content‑defined chunking for block‑level delta sync (`chunker`); shared domain types (`core`); SQLite metadata store with migrations and device/folder persistence (`metadata`, pure‑Go, no cgo). All unit‑tested and green on Windows, macOS and Linux.
 
-## M2 — Filesystem watcher & scanner ⬜
+## M2 — Filesystem watcher & scanner 🚧 (next)
 Native watchers (no polling); initial scan; index diffing; rename/move detection via block hashes; delete detection. Edge‑case tests.
 
 ## M3 — DeltaSync Protocol & transport ⬜

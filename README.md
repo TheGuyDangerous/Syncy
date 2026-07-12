@@ -17,6 +17,8 @@ Keep your folders in sync across Windows, macOS, Linux and Android — with no c
 
 > [!NOTE]
 > **Status: early development (pre‑alpha).** Syncy is being built in the open, milestone by milestone. This README documents the target architecture and tracks what is actually implemented — see the [feature status](#features) and [roadmap](./ROADMAP.md). Features are only ticked once they are implemented **and tested**.
+>
+> **Implemented so far (M0–M1):** the engine core — SHA‑256 content identifiers, deterministic content‑defined chunking (block‑level delta basis) and the SQLite metadata store — all unit‑tested and green on Windows, macOS and Linux CI. **Next up (M2):** the filesystem watcher and scanner.
 
 ---
 
