@@ -16,10 +16,10 @@ Native recursive watcher (fsnotify, no polling); folder scanner producing a cont
 ## M3 — DeltaSync Protocol & transport ✅
 Ed25519 device identity with mutual TLS; authenticated QUIC transport; the DeltaSync Protocol framing and messages; and a reconciliation session that syncs real files between two peers — pulling missing files, reusing local blocks by hash (delta + dedup), verifying block and whole‑file integrity, and atomically replacing files. Tested with two‑node loopback sync and malformed‑frame handling.
 
-## M4 — Sync engine, conflicts & versioning 🚧 (next)
-Orchestration of scan → reconcile → transfer → apply; version‑vector conflict detection & resolution; version history with rollback; durable offline queue.
+## M4 — Sync engine, conflicts & versioning ✅
+Bidirectional convergence over a connection; version history with rollback; version‑vector and last‑synced‑baseline conflict detection that writes conflict copies instead of clobbering; a durable offline queue; and an `Engine` facade with `Sync` that ties it together. Persisted baselines make conflict detection real across sync rounds.
 
-## M5 — Discovery & daemon ⬜
+## M5 — Discovery & daemon 🚧 (next)
 mDNS LAN‑first discovery with global fallback; the `syncyd` daemon; local control API (gRPC/HTTP) for clients.
 
 ## M6 — Desktop app (Tauri) ⬜

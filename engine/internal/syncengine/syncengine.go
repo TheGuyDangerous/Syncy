@@ -4,12 +4,23 @@ package syncengine
 
 import (
 	"context"
+	"io/fs"
+	"path/filepath"
+	"strings"
 
 	"github.com/TheGuyDangerous/Syncy/engine/internal/core"
+	"github.com/TheGuyDangerous/Syncy/engine/internal/hashing"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/identity"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/metadata"
+	"github.com/TheGuyDangerous/Syncy/engine/internal/scanner"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/session"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/transport"
+	"github.com/TheGuyDangerous/Syncy/engine/internal/versioning"
+)
+
+const (
+	versionsDir = ".syncy-versions"
+	maxVersions = 10
 )
 
 type Engine struct {
@@ -43,4 +54,59 @@ func (e *Engine) Devices() ([]core.Device, error) { return e.store.ListDevices()
 func Converge(ctx context.Context, conn *transport.Conn, folder session.Folder, opts ...session.Option) (session.Stats, error) {
 	go func() { _ = session.Serve(ctx, conn, folder) }()
 	return session.Pull(ctx, conn, folder.ID, folder.Dir, folder.Index, opts...)
+}
+
+// Sync converges a stored folder with a peer using the persisted last-synced
+// baseline for conflict detection and version history, then records the new
+// baseline for the next round.
+func (e *Engine) Sync(ctx context.Context, conn *transport.Conn, folderID string) (session.Stats, error) {
+	folder, err := e.store.GetFolder(folderID)
+	if err != nil {
+		return session.Stats{}, err
+	}
+	idx, err := e.scan(folder.Path)
+	if err != nil {
+		return session.Stats{}, err
+	}
+	baseline, err := e.store.GetSyncedBaseline(folderID)
+	if err != nil {
+		return session.Stats{}, err
+	}
+
+	versions := versioning.New(filepath.Join(folder.Path, versionsDir), maxVersions)
+	stats, err := Converge(ctx, conn, session.Folder{ID: folderID, Dir: folder.Path, Index: idx},
+		session.WithBaseline(baseline),
+		session.WithConflictNaming(e.ID()),
+		session.WithVersioning(versions),
+	)
+	if err != nil {
+		return stats, err
+	}
+
+	newIdx, err := e.scan(folder.Path)
+	if err != nil {
+		return stats, err
+	}
+	if err := e.store.SetSyncedBaseline(folderID, indexHashes(newIdx)); err != nil {
+		return stats, err
+	}
+	return stats, nil
+}
+
+func (e *Engine) scan(dir string) (*scanner.Index, error) {
+	sc, err := scanner.New(nil, scanner.WithSkip(func(rel string, _ fs.DirEntry) bool {
+		return rel == versionsDir || strings.HasPrefix(rel, versionsDir+"/") || strings.HasSuffix(rel, ".syncy-tmp")
+	}))
+	if err != nil {
+		return nil, err
+	}
+	return sc.Scan(dir)
+}
+
+func indexHashes(idx *scanner.Index) map[string]hashing.Hash {
+	out := make(map[string]hashing.Hash, len(idx.Files))
+	for path, fi := range idx.Files {
+		out[path] = fi.Hash
+	}
+	return out
 }
