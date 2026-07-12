@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"hash"
 	"io"
 	"os"
 )
@@ -99,6 +100,30 @@ func (h *Hash) UnmarshalText(text []byte) error {
 	}
 	*h = parsed
 	return nil
+}
+
+// Hasher computes a Hash incrementally from streamed data. It implements
+// io.Writer, so it can be combined with io.TeeReader to hash a stream while it
+// is being read for another purpose (for example, while chunking a file).
+type Hasher struct {
+	h hash.Hash
+}
+
+// NewHasher returns a ready-to-use incremental hasher.
+func NewHasher() *Hasher {
+	return &Hasher{h: sha256.New()}
+}
+
+// Write adds p to the running hash. It never returns an error.
+func (w *Hasher) Write(p []byte) (int, error) {
+	return w.h.Write(p)
+}
+
+// Sum returns the hash of everything written so far.
+func (w *Hasher) Sum() Hash {
+	var out Hash
+	w.h.Sum(out[:0])
+	return out
 }
 
 // Parse decodes a 64-character hex string into a Hash.
