@@ -38,3 +38,13 @@ type Folder struct {
 	Paused    bool
 	AddedAt   time.Time
 }
+
+type QueuedOp struct {
+	ID        int64
+	DeviceID  DeviceID
+	FolderID  string
+	Kind      string
+	Payload   string
+	CreatedAt time.Time
+	Attempts  int
+}
