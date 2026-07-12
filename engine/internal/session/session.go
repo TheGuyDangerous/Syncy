@@ -15,6 +15,7 @@ import (
 	"github.com/TheGuyDangerous/Syncy/engine/internal/protocol"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/scanner"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/transport"
+	"github.com/TheGuyDangerous/Syncy/engine/internal/versioning"
 )
 
 const tmpSuffix = ".syncy-tmp"
@@ -23,6 +24,16 @@ type Folder struct {
 	ID    string
 	Dir   string
 	Index *scanner.Index
+}
+
+type config struct {
+	versions *versioning.Store
+}
+
+type Option func(*config)
+
+func WithVersioning(store *versioning.Store) Option {
+	return func(c *config) { c.versions = store }
 }
 
 type Stats struct {
@@ -80,7 +91,12 @@ func serveBlocks(s transport.Stream, dir string, req protocol.BlockRequest) {
 	}
 }
 
-func Pull(ctx context.Context, conn *transport.Conn, folderID, destDir string, local *scanner.Index) (Stats, error) {
+func Pull(ctx context.Context, conn *transport.Conn, folderID, destDir string, local *scanner.Index, opts ...Option) (Stats, error) {
+	var cfg config
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
 	var stats Stats
 	remote, err := requestIndex(ctx, conn, folderID)
 	if err != nil {
@@ -94,7 +110,7 @@ func Pull(ctx context.Context, conn *transport.Conn, folderID, destDir string, l
 		if lf, ok := local.Files[rf.Path]; ok && lf.Hash == rf.Hash {
 			continue
 		}
-		if err := pullFile(ctx, conn, folderID, destDir, rf, localBlocks, &stats); err != nil {
+		if err := pullFile(ctx, conn, folderID, destDir, rf, localBlocks, &cfg, &stats); err != nil {
 			return stats, err
 		}
 		stats.FilesUpdated++
@@ -192,7 +208,7 @@ func requestBlocks(ctx context.Context, conn *transport.Conn, folderID, path str
 	return out, nil
 }
 
-func pullFile(ctx context.Context, conn *transport.Conn, folderID, destDir string, rf protocol.FileMeta, localBlocks map[hashing.Hash]blockLoc, stats *Stats) error {
+func pullFile(ctx context.Context, conn *transport.Conn, folderID, destDir string, rf protocol.FileMeta, localBlocks map[hashing.Hash]blockLoc, cfg *config, stats *Stats) error {
 	var need []protocol.BlockRef
 	for _, b := range rf.Blocks {
 		if _, ok := localBlocks[b.Hash]; !ok {
@@ -257,6 +273,15 @@ func pullFile(ctx context.Context, conn *transport.Conn, folderID, destDir strin
 	if hasher.Sum() != rf.Hash {
 		os.Remove(tmpPath)
 		return fmt.Errorf("session: file hash mismatch for %s", rf.Path)
+	}
+
+	if cfg.versions != nil {
+		if _, err := os.Stat(destPath); err == nil {
+			if err := cfg.versions.Archive(destDir, rf.Path); err != nil {
+				os.Remove(tmpPath)
+				return err
+			}
+		}
 	}
 	return os.Rename(tmpPath, destPath)
 }
