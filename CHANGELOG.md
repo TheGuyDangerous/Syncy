@@ -29,3 +29,10 @@ reaches its first release.
   cgo) with a versioned migration runner and CRUD for devices and folders.
   WAL journaling, foreign keys and a busy timeout are enabled. Tested for
   migration idempotency, round-trips, upsert semantics and not-found paths.
+- `hashing.Hasher`: an incremental `io.Writer` hasher, so a file can be
+  whole-file hashed in the same pass it is chunked.
+- `scanner` package: walks a folder into a content-addressed `Index` (per file:
+  size, mtime, mode, whole-file hash and content-defined blocks). Paths are
+  relative and slash-separated for cross-platform consistency; supports a skip
+  predicate for ignore rules. Tested for correctness, determinism, empty files,
+  skipping and error paths.

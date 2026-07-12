@@ -161,6 +161,26 @@ func TestShortLength(t *testing.T) {
 	}
 }
 
+func TestHasherMatchesOfBytes(t *testing.T) {
+	data := []byte("stream me in pieces")
+	h := NewHasher()
+	// Write in several chunks to exercise incremental hashing.
+	for _, part := range [][]byte{data[:4], data[4:10], data[10:]} {
+		if _, err := h.Write(part); err != nil {
+			t.Fatalf("Write: %v", err)
+		}
+	}
+	if got := h.Sum(); got != OfBytes(data) {
+		t.Errorf("Hasher.Sum() = %s, want %s", got, OfBytes(data))
+	}
+}
+
+func TestHasherEmpty(t *testing.T) {
+	if got := NewHasher().Sum().String(); got != emptyHex {
+		t.Errorf("empty Hasher = %s, want %s", got, emptyHex)
+	}
+}
+
 func BenchmarkOfBytes1KiB(b *testing.B) {
 	data := bytes.Repeat([]byte("a"), 1024)
 	b.SetBytes(int64(len(data)))
