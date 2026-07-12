@@ -12,3 +12,6 @@ reaches its first release.
   (MPL‑2.0), contribution guide, security policy and code of conduct.
 - Continuous integration skeleton and issue / pull‑request templates.
 - DeltaSync Protocol (DSP) design notes.
+- Go engine module bootstrap: the `syncyd` daemon entry point and a
+  `buildinfo` package (with tests). CI now builds and tests the engine on
+  Windows, macOS and Linux, running the race detector on Linux.
