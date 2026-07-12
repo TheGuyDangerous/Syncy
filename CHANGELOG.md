@@ -98,6 +98,13 @@ reaches its first release.
   other with no configuration.
 - `session.Serve` now dispatches by the requested folder (`FolderSource`), so a
   single connection can serve every folder a device shares.
+- `daemon` package and a wired `syncyd`: the engine runs as a real background
+  service — it loads/creates the device identity and metadata store, listens for
+  QUIC connections (accepting only trusted, paired devices), announces and
+  discovers peers over mDNS, syncs shared folders with discovered trusted peers,
+  and serves the token-authenticated control API. Graceful shutdown on
+  SIGINT/SIGTERM; data directory, listen and API addresses are configurable.
+  Completes the daemon and M5.
 - Release pipeline now builds **native installers** with Tauri for Windows
   (NSIS/MSI), macOS (`.dmg`) and Linux (`.deb`/`.AppImage`) and attaches them to
   the GitHub pre-release, replacing the earlier raw engine archives.

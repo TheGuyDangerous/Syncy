@@ -60,6 +60,35 @@ func Converge(ctx context.Context, conn *transport.Conn, folder session.Folder, 
 // baseline for conflict detection and version history, then records the new
 // baseline for the next round.
 func (e *Engine) Sync(ctx context.Context, conn *transport.Conn, folderID string) (session.Stats, error) {
+	snapshot, err := e.FolderSnapshot()
+	if err != nil {
+		return session.Stats{}, err
+	}
+	go func() { _ = session.Serve(ctx, conn, session.Folders(snapshot)) }()
+	return e.PullFolder(ctx, conn, folderID)
+}
+
+// FolderSnapshot scans every shared folder once, for serving to a peer.
+func (e *Engine) FolderSnapshot() (map[string]session.Folder, error) {
+	folders, err := e.store.ListFolders()
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[string]session.Folder, len(folders))
+	for _, f := range folders {
+		idx, err := e.scan(f.Path)
+		if err != nil {
+			continue
+		}
+		out[f.ID] = session.Folder{ID: f.ID, Dir: f.Path, Index: idx}
+	}
+	return out, nil
+}
+
+// PullFolder pulls one folder from the peer (using the persisted baseline for
+// conflict detection and versioning) and records the new baseline. It does not
+// serve; the caller manages serving on the connection.
+func (e *Engine) PullFolder(ctx context.Context, conn *transport.Conn, folderID string) (session.Stats, error) {
 	folder, err := e.store.GetFolder(folderID)
 	if err != nil {
 		return session.Stats{}, err
@@ -72,9 +101,8 @@ func (e *Engine) Sync(ctx context.Context, conn *transport.Conn, folderID string
 	if err != nil {
 		return session.Stats{}, err
 	}
-
 	versions := versioning.New(filepath.Join(folder.Path, versionsDir), maxVersions)
-	stats, err := Converge(ctx, conn, session.Folder{ID: folderID, Dir: folder.Path, Index: idx},
+	stats, err := session.Pull(ctx, conn, folderID, folder.Path, idx,
 		session.WithBaseline(baseline),
 		session.WithConflictNaming(e.ID()),
 		session.WithVersioning(versions),

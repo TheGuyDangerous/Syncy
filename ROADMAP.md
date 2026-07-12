@@ -19,10 +19,10 @@ Ed25519 device identity with mutual TLS; authenticated QUIC transport; the Delta
 ## M4 — Sync engine, conflicts & versioning ✅
 Bidirectional convergence over a connection; version history with rollback; version‑vector and last‑synced‑baseline conflict detection that writes conflict copies instead of clobbering; a durable offline queue; and an `Engine` facade with `Sync` that ties it together. Persisted baselines make conflict detection real across sync rounds.
 
-## M5 — Discovery & daemon 🚧 (next)
-mDNS LAN‑first discovery with global fallback; the `syncyd` daemon; local control API (gRPC/HTTP) for clients.
+## M5 — Discovery & daemon ✅
+mDNS LAN‑first discovery; a token‑authenticated local HTTP control API; and the `syncyd` daemon that ties it together — identity, metadata, QUIC listener (trusted peers only), discovery‑driven sync, and the control API, with graceful shutdown.
 
-## M6 — Desktop app (Tauri) ⬜
+## M6 — Desktop app (Tauri) 🚧 (next)
 Premium, dark‑first UI: system‑tray background service with status colors, popover, dashboard, devices, folders, transfers, history, versions, conflicts, logs, settings (incl. Integrations). Close‑to‑tray; launch on startup.
 
 ## M7 — Mobile app (Flutter, Android) ⬜
