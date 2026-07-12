@@ -59,6 +59,9 @@ reaches its first release.
   Logs, Settings), a status‑colour design system, and working Dashboard,
   Folders (add/remove), Devices, Conflicts and Settings (theme, AI‑provider
   BYOK, about) screens wired to the daemon.
+- Desktop **system tray** with a menu (Open, Quit) and left‑click to open the
+  window, plus **close‑to‑tray**: closing the window hides it and keeps the
+  engine running in the background, so only Quit fully exits.
 - `transport` package: authenticated QUIC transport (quic-go) built on the
   device identity's mutual-TLS configs. Connections expose the peer's device ID
   and multiplexed streams. Tested with a loopback handshake, peer-ID
