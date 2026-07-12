@@ -76,6 +76,10 @@ reaches its first release.
 - The sync session can now archive a file into the version store before it is
   overwritten (`session.WithVersioning`), so an incoming change never silently
   discards the previous content.
+- `syncengine` package: an `Engine` facade that manages folders and devices
+  (persisted in the metadata store), and `Converge`, which serves the local
+  folder while pulling the peer's so two devices bidirectionally reach the union
+  of their newest files. Verified with a two-node convergence integration test.
 - Release pipeline now builds **native installers** with Tauri for Windows
   (NSIS/MSI), macOS (`.dmg`) and Linux (`.deb`/`.AppImage`) and attaches them to
   the GitHub pre-release, replacing the earlier raw engine archives.
