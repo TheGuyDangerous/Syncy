@@ -91,3 +91,52 @@ jobs:
       - name: Test (race detector)
         if: steps.detect.outputs.exists == 'true' && runner.os == 'Linux'
         run: cd engine && CGO_ENABLED=1 go test -race -count=1 ./...
+
+  # Desktop app — compiles the frontend, builds the Go sidecar, and type-checks
+  # the Rust shell. Full cross-platform installers are produced in release.yml.
+  desktop:
+    name: Desktop
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: engine/go.mod
+          cache-dependency-path: engine/go.sum
+
+      - name: Cache cargo
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri -> target
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Install frontend dependencies
+        working-directory: desktop
+        run: npm ci
+
+      - name: Build sidecar
+        working-directory: desktop
+        run: npm run build:sidecar
+
+      - name: Build frontend
+        working-directory: desktop
+        run: npm run build
+
+      - name: Check Rust
+        working-directory: desktop/src-tauri
+        run: cargo check

@@ -16,12 +16,24 @@ if (!triple) {
 const ext = process.platform === "win32" ? ".exe" : "";
 const outDir = join(srcTauri, "binaries");
 mkdirSync(outDir, { recursive: true });
-const out = join(outDir, `syncyd-${triple}${ext}`);
 
-execFileSync("go", ["build", "-trimpath", "-o", out, "./cmd/syncyd"], {
-  cwd: engineDir,
-  stdio: "inherit",
-  env: { ...process.env, CGO_ENABLED: "0" },
-});
+function buildGo(out, extraEnv = {}) {
+  execFileSync("go", ["build", "-trimpath", "-o", out, "./cmd/syncyd"], {
+    cwd: engineDir,
+    stdio: "inherit",
+    env: { ...process.env, CGO_ENABLED: "0", ...extraEnv },
+  });
+  console.log(`built sidecar: ${out}`);
+}
 
-console.log(`built sidecar: ${out}`);
+buildGo(join(outDir, `syncyd-${triple}${ext}`));
+
+if (process.platform === "darwin") {
+  const arm = join(outDir, "syncyd-aarch64-apple-darwin");
+  const amd = join(outDir, "syncyd-x86_64-apple-darwin");
+  buildGo(arm, { GOOS: "darwin", GOARCH: "arm64" });
+  buildGo(amd, { GOOS: "darwin", GOARCH: "amd64" });
+  const universal = join(outDir, "syncyd-universal-apple-darwin");
+  execFileSync("lipo", ["-create", "-output", universal, arm, amd], { stdio: "inherit" });
+  console.log(`built sidecar: ${universal}`);
+}
