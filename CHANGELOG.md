@@ -64,6 +64,9 @@ reaches its first release.
   block and the whole-file hash, then atomically replacing the file. Two-node
   loopback integration tests sync real files end-to-end, including delta reuse
   of shared blocks and skipping up-to-date files.
+- `versioning` package: keeps recoverable, timestamped copies of files before
+  they are overwritten or deleted, with listing, restore and pruning to a
+  configurable maximum number of versions per file.
 - Release pipeline now builds **native installers** with Tauri for Windows
   (NSIS/MSI), macOS (`.dmg`) and Linux (`.deb`/`.AppImage`) and attaches them to
   the GitHub pre-release, replacing the earlier raw engine archives.
