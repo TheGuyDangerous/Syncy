@@ -77,6 +77,14 @@ var migrations = [][]string{
 		)`,
 		`CREATE INDEX idx_queue_device ON queue(device_id, id)`,
 	},
+	{
+		`CREATE TABLE synced (
+			folder_id TEXT NOT NULL,
+			path      TEXT NOT NULL,
+			hash      TEXT NOT NULL,
+			PRIMARY KEY (folder_id, path)
+		)`,
+	},
 }
 
 func (s *Store) migrate() error {
