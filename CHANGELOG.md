@@ -58,6 +58,12 @@ reaches its first release.
   FolderSummary, IndexUpdate, BlockRequest, BlockData, Ack, Ping/Pong, Error),
   and raw block-data encoding. Tested for round-trips and rejection of
   oversized, truncated and malformed frames.
+- `session` package: DeltaSync reconciliation over the QUIC transport. A device
+  serves its folder index and blocks and pulls missing files from a peer,
+  reusing blocks it already has locally (delta + dedup by hash), verifying every
+  block and the whole-file hash, then atomically replacing the file. Two-node
+  loopback integration tests sync real files end-to-end, including delta reuse
+  of shared blocks and skipping up-to-date files.
 - Release pipeline now builds **native installers** with Tauri for Windows
   (NSIS/MSI), macOS (`.dmg`) and Linux (`.deb`/`.AppImage`) and attaches them to
   the GitHub pre-release, replacing the earlier raw engine archives.
