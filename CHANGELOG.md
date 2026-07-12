@@ -18,3 +18,6 @@ versioned independently of the desktop engine and lives on the `flutter` branch.
   monospace treatment for device identifiers.
 - Continuous integration: analyze, test, and per-architecture debug APK builds
   (`--split-per-abi`) uploaded as artifacts on every push and pull request.
+- Release workflow: tagging a `flutter` commit builds per-architecture release
+  APKs (`syncy-mobile-<version>-<abi>.apk`) and publishes them alongside the
+  latest desktop installers, carried over unchanged from the previous release.
