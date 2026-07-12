@@ -15,6 +15,7 @@ import (
 
 	"github.com/TheGuyDangerous/Syncy/engine/internal/conflict"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/core"
+	"github.com/TheGuyDangerous/Syncy/engine/internal/fsafe"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/hashing"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/protocol"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/scanner"
@@ -122,7 +123,11 @@ func serveStream(s transport.Stream, source FolderSource) {
 }
 
 func serveBlocks(s transport.Stream, dir string, req protocol.BlockRequest) {
-	f, err := os.Open(filepath.Join(dir, filepath.FromSlash(req.Path)))
+	full, err := fsafe.Join(dir, req.Path)
+	if err != nil {
+		return
+	}
+	f, err := os.Open(full)
 	if err != nil {
 		return
 	}
@@ -151,7 +156,7 @@ func Pull(ctx context.Context, conn *transport.Conn, folderID, destDir string, l
 	}
 	localBlocks := buildBlockIndex(local)
 	for _, rf := range remote {
-		if rf.Deleted {
+		if rf.Deleted || !fsafe.Local(rf.Path) {
 			continue
 		}
 		lf, hasLocal := local.Files[rf.Path]
@@ -305,7 +310,10 @@ func pullFile(ctx context.Context, conn *transport.Conn, folderID, destDir strin
 		}
 	}
 
-	destPath := filepath.Join(destDir, filepath.FromSlash(targetRel))
+	destPath, err := fsafe.Join(destDir, targetRel)
+	if err != nil {
+		return err
+	}
 	if err := os.MkdirAll(filepath.Dir(destPath), 0o755); err != nil {
 		return err
 	}
@@ -367,7 +375,11 @@ func pullFile(ctx context.Context, conn *transport.Conn, folderID, destDir strin
 }
 
 func readLocalBlock(destDir string, loc blockLoc) ([]byte, error) {
-	f, err := os.Open(filepath.Join(destDir, filepath.FromSlash(loc.path)))
+	full, err := fsafe.Join(destDir, loc.path)
+	if err != nil {
+		return nil, err
+	}
+	f, err := os.Open(full)
 	if err != nil {
 		return nil, err
 	}

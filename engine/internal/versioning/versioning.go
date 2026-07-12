@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/TheGuyDangerous/Syncy/engine/internal/fsafe"
 )
 
 const stampLayout = "20060102-150405"
@@ -32,6 +34,9 @@ func New(dir string, keep int) *Store {
 }
 
 func (s *Store) Archive(root, relPath string) error {
+	if !fsafe.Local(relPath) {
+		return fsafe.ErrUnsafePath
+	}
 	src := filepath.Join(root, filepath.FromSlash(relPath))
 	info, err := os.Stat(src)
 	if err != nil {
@@ -54,6 +59,9 @@ func (s *Store) Archive(root, relPath string) error {
 }
 
 func (s *Store) Versions(relPath string) ([]Version, error) {
+	if !fsafe.Local(relPath) {
+		return nil, fsafe.ErrUnsafePath
+	}
 	rel := filepath.FromSlash(relPath)
 	dir := filepath.Join(s.dir, filepath.Dir(rel))
 	prefix, ext := splitName(filepath.Base(rel))
@@ -93,6 +101,9 @@ func (s *Store) Versions(relPath string) ([]Version, error) {
 }
 
 func (s *Store) Restore(root, relPath, stamp string) error {
+	if !fsafe.Local(relPath) {
+		return fsafe.ErrUnsafePath
+	}
 	rel := filepath.FromSlash(relPath)
 	prefix, ext := splitName(filepath.Base(rel))
 	archived := filepath.Join(s.dir, filepath.Dir(rel), prefix+"~"+stamp+ext)

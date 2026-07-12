@@ -145,6 +145,22 @@ func TestArchiveMissingFile(t *testing.T) {
 	}
 }
 
+func TestRejectsPathTraversal(t *testing.T) {
+	s, root := newStore(t, 0)
+	writeAt(t, root, "ok.txt", []byte("x"), time.Unix(1_700_000_000, 0).UTC())
+
+	bad := "../escape.txt"
+	if err := s.Archive(root, bad); err == nil {
+		t.Error("Archive should reject a traversal path")
+	}
+	if _, err := s.Versions(bad); err == nil {
+		t.Error("Versions should reject a traversal path")
+	}
+	if err := s.Restore(root, bad, "20260101-000000"); err == nil {
+		t.Error("Restore should reject a traversal path")
+	}
+}
+
 func TestArchiveSameStampUniquifies(t *testing.T) {
 	s, root := newStore(t, 0)
 	mod := time.Date(2026, 5, 5, 5, 5, 5, 0, time.UTC)
