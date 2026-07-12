@@ -34,3 +34,7 @@ Syncy is designed to resist a network attacker who can observe, modify, replay o
 ## Scope
 
 The core engine, its protocol, and the official desktop/mobile clients are in scope. Optional third‑party AI integrations (BYOK) run against endpoints you configure and are outside the sync trust boundary; data is only sent to them when you explicitly initiate an AI‑assisted action.
+
+## Known advisories
+
+- **`glib` < 0.20.0 — `VariantStrIter` unsoundness (moderate).** The desktop app's Linux WebKitGTK backend pulls in `glib` 0.18 transitively through Tauri (`tauri` → `gtk`/`webkit2gtk` → `glib "^0.18"`). The fix ships in `glib` 0.20, which requires the gtk‑rs 0.20 stack that Tauri/webkit2gtk‑rs have not yet adopted, so no compatible upgrade exists in the dependency graph at this time. This affects **Linux builds only** — Windows uses WebView2 and macOS uses WKWebView, neither of which compiles `glib`. The affected code path (`GVariant` string‑array iteration) is not exercised by Syncy directly, and the impact is a potential crash. We track this and will bump as soon as Tauri adopts gtk‑rs 0.20; the engine and its network‑facing code are unaffected.

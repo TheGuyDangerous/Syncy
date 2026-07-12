@@ -105,6 +105,13 @@ reaches its first release.
   and serves the token-authenticated control API. Graceful shutdown on
   SIGINT/SIGTERM; data directory, listen and API addresses are configurable.
   Completes the daemon and M5.
+
+### Security
+- Documented the `glib` < 0.20 `VariantStrIter` advisory (moderate) as a known
+  issue: it reaches us only transitively through Tauri's Linux WebKitGTK stack,
+  has no compatible upstream fix yet (Tauri pins gtk-rs 0.18), affects Linux
+  desktop builds only, and does not touch the engine. See SECURITY.md.
+- Resolved the `golang.org/x/crypto` advisories by upgrading to 0.52.
 - Release pipeline now builds **native installers** with Tauri for Windows
   (NSIS/MSI), macOS (`.dmg`) and Linux (`.deb`/`.AppImage`) and attaches them to
   the GitHub pre-release, replacing the earlier raw engine archives.
