@@ -20,7 +20,7 @@ jobs:
     name: Repository hygiene
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Verify required project files exist
         run: |
           set -e
@@ -42,7 +42,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Detect Go module
         id: detect
@@ -57,7 +57,7 @@ jobs:
 
       - name: Set up Go
         if: steps.detect.outputs.exists == 'true'
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: engine/go.mod
           cache-dependency-path: engine/go.sum
