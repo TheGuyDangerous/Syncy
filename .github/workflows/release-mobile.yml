@@ -1,0 +1,100 @@
+name: Release (Mobile)
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.24.3
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - run: flutter build apk --release --split-per-abi
+
+      - name: Stage APKs with the app version in the name
+        run: |
+          set -euo pipefail
+          ver="$(grep -E '^version:' pubspec.yaml | sed -E 's/version:[[:space:]]*([0-9][0-9.]*).*/\1/')"
+          mkdir -p dist
+          for f in build/app/outputs/flutter-apk/app-*-release.apk; do
+            abi="$(basename "$f" | sed -E 's/app-(.*)-release\.apk/\1/')"
+            cp "$f" "dist/syncy-mobile-${ver}-${abi}.apk"
+          done
+          ls -l dist
+
+      - name: Publish the unified release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          mobile_ver="$(grep -E '^version:' pubspec.yaml | sed -E 's/version:[[:space:]]*([0-9][0-9.]*).*/\1/')"
+
+          desk_release=""
+          for r in $(gh release list --limit 40 --json tagName,createdAt \
+                      --jq 'sort_by(.createdAt)|reverse|.[].tagName'); do
+            [ "$r" = "$TAG" ] && continue
+            if gh release view "$r" --json assets --jq '.assets[].name' \
+                 | grep -qiE '\.(exe|msi|dmg|AppImage|deb|rpm)$|\.app\.tar\.gz$'; then
+              desk_release="$r"; break
+            fi
+          done
+
+          desktop_ver=""
+          if [ -n "$desk_release" ]; then
+            mkdir -p carried
+            gh release download "$desk_release" --dir carried \
+              --pattern '*.exe' --pattern '*.msi' --pattern '*.dmg' \
+              --pattern '*.AppImage' --pattern '*.deb' --pattern '*.rpm' \
+              --pattern '*.app.tar.gz'
+            desktop_ver="$(ls carried | grep -iE '\.(exe|msi|dmg)$' | head -1 \
+              | sed -E 's/^Syncy[._]([0-9][0-9.]*)[._].*/\1/')"
+          fi
+
+          {
+            echo "Syncy pre-release **$TAG** — work in progress."
+            echo
+            echo "| Component | Version | This release |"
+            echo "|---|---|---|"
+            echo "| Android app | $mobile_ver | rebuilt |"
+            if [ -n "$desktop_ver" ]; then
+              echo "| Desktop — Windows, macOS, Linux | $desktop_ver | unchanged (carried from \`$desk_release\`) |"
+            else
+              echo "| Desktop — Windows, macOS, Linux | — | published from \`main\` |"
+            fi
+            echo
+            if [ -n "$desktop_ver" ]; then
+              echo "Only the Android app changed in this release. The desktop installers are the same binaries as \`$desk_release\`."
+            fi
+            echo
+            echo "**Android:** per-architecture \`.apk\` (arm64-v8a, armeabi-v7a, x86_64)."
+            if [ -n "$desktop_ver" ]; then
+              echo "**Desktop:** \`.exe\`/\`.msi\` (Windows), \`.dmg\` (macOS), \`.AppImage\`/\`.deb\`/\`.rpm\` (Linux)."
+            fi
+          } > notes.md
+
+          shopt -s nullglob
+          files=(dist/*.apk carried/*)
+          gh release create "$TAG" "${files[@]}" \
+            --prerelease --title "Syncy $TAG" --notes-file notes.md
