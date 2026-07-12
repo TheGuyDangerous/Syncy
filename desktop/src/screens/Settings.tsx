@@ -2,10 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { getThemePref, setThemePref, type ThemePref } from "../lib/theme";
+import { api, errorMessage, type AiKind, type AiConfigInput } from "../lib/api";
 import { Screen } from "../components/Screen";
-import { Icon } from "../components/Icon";
-import { StatusPill } from "../components/StatusDot";
-import { EmptyState } from "../components/EmptyState";
 
 const SECTIONS = [
   { id: "general", label: "General" },
@@ -25,30 +23,23 @@ const THEME_OPTIONS: { value: ThemePref; label: string }[] = [
   { value: "light", label: "Light" },
 ];
 
-interface AiProvider {
-  id: string;
-  name: string;
-  baseUrl: string;
-  apiKey: string;
-  model: string;
-  enabled: boolean;
-}
+const AI_PROVIDERS: { value: AiKind; label: string; defaultUrl: string; needsKey: boolean }[] = [
+  { value: "openai", label: "OpenAI", defaultUrl: "https://api.openai.com/v1", needsKey: true },
+  { value: "anthropic", label: "Anthropic", defaultUrl: "https://api.anthropic.com/v1", needsKey: true },
+  {
+    value: "gemini",
+    label: "Google Gemini",
+    defaultUrl: "https://generativelanguage.googleapis.com/v1beta",
+    needsKey: true,
+  },
+  { value: "openrouter", label: "OpenRouter", defaultUrl: "https://openrouter.ai/api/v1", needsKey: true },
+  { value: "ollama", label: "Ollama (local)", defaultUrl: "http://localhost:11434/v1", needsKey: false },
+  { value: "lmstudio", label: "LM Studio (local)", defaultUrl: "http://localhost:1234/v1", needsKey: false },
+  { value: "custom", label: "Custom (OpenAI-compatible)", defaultUrl: "", needsKey: false },
+];
 
-const PROVIDERS_KEY = "syncy.ai-providers";
-
-function loadProviders(): AiProvider[] {
-  try {
-    const raw = localStorage.getItem(PROVIDERS_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as AiProvider[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function maskKey(key: string): string {
-  return key.length > 4 ? `••••${key.slice(-4)}` : "••••";
+function providerMeta(kind: AiKind) {
+  return AI_PROVIDERS.find((p) => p.value === kind) ?? AI_PROVIDERS[0];
 }
 
 function SectionHeader({ title, desc }: { title: string; desc: string }) {
@@ -76,15 +67,17 @@ function NoteCard({ name, hint }: { name: string; hint: string }) {
 export default function Settings() {
   const [section, setSection] = useState<SectionId>("general");
   const [theme, setTheme] = useState<ThemePref>(getThemePref);
-  const [providers, setProviders] = useState<AiProvider[]>(loadProviders);
-  const [showProviderForm, setShowProviderForm] = useState(false);
-  const [pName, setPName] = useState("");
-  const [pUrl, setPUrl] = useState("");
-  const [pKey, setPKey] = useState("");
-  const [pModel, setPModel] = useState("");
-  const [pError, setPError] = useState<string | null>(null);
   const [version, setVersion] = useState<string | null>(null);
   const [autostart, setAutostart] = useState(false);
+
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiKind, setAiKind] = useState<AiKind>("openai");
+  const [aiBaseUrl, setAiBaseUrl] = useState("");
+  const [aiModel, setAiModel] = useState("");
+  const [aiKey, setAiKey] = useState("");
+  const [aiHasKey, setAiHasKey] = useState(false);
+  const [aiBusy, setAiBusy] = useState<null | "save" | "test">(null);
+  const [aiMsg, setAiMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     invoke<string>("app_version")
@@ -93,6 +86,16 @@ export default function Settings() {
     isEnabled()
       .then(setAutostart)
       .catch(() => setAutostart(false));
+    api
+      .aiConfig()
+      .then((cfg) => {
+        setAiEnabled(cfg.enabled);
+        setAiKind(cfg.kind || "openai");
+        setAiBaseUrl(cfg.base_url);
+        setAiModel(cfg.model);
+        setAiHasKey(cfg.has_api_key);
+      })
+      .catch(() => {});
   }, []);
 
   function chooseTheme(pref: ThemePref) {
@@ -114,47 +117,46 @@ export default function Settings() {
     }
   }
 
-  function persist(next: AiProvider[]) {
-    setProviders(next);
-    try {
-      localStorage.setItem(PROVIDERS_KEY, JSON.stringify(next));
-    } catch {}
+  function aiInput(): AiConfigInput {
+    return {
+      enabled: aiEnabled,
+      kind: aiKind,
+      base_url: aiBaseUrl.trim(),
+      model: aiModel.trim(),
+      api_key: aiKey,
+    };
   }
 
-  function addProvider(e: FormEvent) {
+  async function saveAi(e: FormEvent) {
     e.preventDefault();
-    const name = pName.trim();
-    const baseUrl = pUrl.trim();
-    if (!name || !baseUrl) {
-      setPError("Name and base URL are required.");
-      return;
+    setAiBusy("save");
+    setAiMsg(null);
+    try {
+      const view = await api.saveAiConfig(aiInput());
+      setAiHasKey(view.has_api_key);
+      setAiKey("");
+      setAiMsg({ ok: true, text: "Saved." });
+    } catch (err) {
+      setAiMsg({ ok: false, text: errorMessage(err) });
+    } finally {
+      setAiBusy(null);
     }
-    persist([
-      ...providers,
-      {
-        id: crypto.randomUUID(),
-        name,
-        baseUrl,
-        apiKey: pKey.trim(),
-        model: pModel.trim(),
-        enabled: false,
-      },
-    ]);
-    setPName("");
-    setPUrl("");
-    setPKey("");
-    setPModel("");
-    setPError(null);
-    setShowProviderForm(false);
   }
 
-  function toggleProvider(id: string) {
-    persist(providers.map((p) => (p.id === id ? { ...p, enabled: !p.enabled } : p)));
+  async function testAi() {
+    setAiBusy("test");
+    setAiMsg(null);
+    try {
+      await api.testAi(aiInput());
+      setAiMsg({ ok: true, text: "Connected — the provider replied." });
+    } catch (err) {
+      setAiMsg({ ok: false, text: errorMessage(err) });
+    } finally {
+      setAiBusy(null);
+    }
   }
 
-  function removeProvider(id: string) {
-    persist(providers.filter((p) => p.id !== id));
-  }
+  const meta = providerMeta(aiKind);
 
   return (
     <Screen title="Settings">
@@ -257,136 +259,102 @@ export default function Settings() {
             <>
               <SectionHeader title="Integrations" desc="Optional services that extend Syncy." />
               <div className="card">
-                <header className="card-head">
+                <div className="setting-row">
                   <div>
-                    <h3 className="card-title">AI providers</h3>
+                    <p className="setting-name">AI assistant</p>
                     <p className="setting-hint">
-                      Optional. Stored locally on this device — never used unless you enable a
-                      provider.
+                      Bring your own provider to explain conflicts and summarize logs. Off by
+                      default; your key stays on this device and is used only when enabled.
                     </p>
                   </div>
-                  <button
-                    className="btn btn--sm"
-                    onClick={() => setShowProviderForm((v) => !v)}
-                  >
-                    <Icon name="plus" size={13} />
-                    Add provider
-                  </button>
-                </header>
+                  <label className="switch">
+                    <input
+                      type="checkbox"
+                      checked={aiEnabled}
+                      onChange={(e) => setAiEnabled(e.target.checked)}
+                      aria-label="Enable AI assistant"
+                    />
+                    <span className="switch-track" />
+                  </label>
+                </div>
 
-                {showProviderForm ? (
-                  <form className="form-card form-card--divider" onSubmit={addProvider}>
-                    <div className="form-grid">
-                      <label className="field">
-                        <span className="field-label">Name</span>
-                        <input
-                          className="input"
-                          value={pName}
-                          onChange={(e) => setPName(e.target.value)}
-                          placeholder="My provider"
-                        />
-                      </label>
-                      <label className="field">
-                        <span className="field-label">Base URL</span>
-                        <input
-                          className="input input--mono"
-                          value={pUrl}
-                          onChange={(e) => setPUrl(e.target.value)}
-                          placeholder="https://api.openai.com/v1"
-                        />
-                      </label>
-                      <label className="field">
-                        <span className="field-label">API key</span>
-                        <input
-                          className="input input--mono"
-                          type="password"
-                          value={pKey}
-                          onChange={(e) => setPKey(e.target.value)}
-                          placeholder="sk-…"
-                        />
-                      </label>
-                      <label className="field">
-                        <span className="field-label">Model</span>
-                        <input
-                          className="input input--mono"
-                          value={pModel}
-                          onChange={(e) => setPModel(e.target.value)}
-                          placeholder="gpt-4o-mini"
-                        />
-                      </label>
-                    </div>
-                    {pError ? (
-                      <p className="form-error" role="alert">
-                        {pError}
-                      </p>
-                    ) : null}
-                    <div className="form-actions">
-                      <button type="submit" className="btn btn--primary">
-                        Add provider
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn--ghost"
-                        onClick={() => setShowProviderForm(false)}
+                <form className="form-card form-card--divider" onSubmit={saveAi}>
+                  <div className="form-grid">
+                    <label className="field">
+                      <span className="field-label">Provider</span>
+                      <select
+                        className="input select"
+                        value={aiKind}
+                        onChange={(e) => setAiKind(e.target.value as AiKind)}
                       >
-                        Cancel
-                      </button>
-                    </div>
-                  </form>
-                ) : null}
-
-                {providers.length === 0 && !showProviderForm ? (
-                  <EmptyState
-                    icon="sparkle"
-                    title="No providers yet"
-                    hint="Add one to use AI features when they arrive. Nothing runs until you enable it."
-                  />
-                ) : null}
-
-                {providers.length > 0 ? (
-                  <ul className="rows">
-                    {providers.map((p) => (
-                      <li key={p.id} className="row">
-                        <label className="switch">
-                          <input
-                            type="checkbox"
-                            checked={p.enabled}
-                            onChange={() => toggleProvider(p.id)}
-                            aria-label={`Enable ${p.name}`}
-                          />
-                          <span className="switch-track" />
-                        </label>
-                        <div className="row-body">
-                          <p className="row-title">
-                            {p.name}
-                            {p.model ? (
-                              <span className="pill">
-                                <span className="mono">{p.model}</span>
-                              </span>
-                            ) : null}
-                          </p>
-                          <p className="row-sub mono">
-                            {p.baseUrl}
-                            {p.apiKey ? ` · ${maskKey(p.apiKey)}` : ""}
-                          </p>
-                        </div>
-                        <div className="row-end">
-                          <StatusPill
-                            tone={p.enabled ? "ok" : "idle"}
-                            label={p.enabled ? "Enabled" : "Off"}
-                          />
-                          <button
-                            className="icon-btn icon-btn--danger"
-                            aria-label={`Remove ${p.name}`}
-                            onClick={() => removeProvider(p.id)}
-                          >
-                            <Icon name="trash" size={15} />
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
+                        {AI_PROVIDERS.map((p) => (
+                          <option key={p.value} value={p.value}>
+                            {p.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field">
+                      <span className="field-label">Model</span>
+                      <input
+                        className="input input--mono"
+                        value={aiModel}
+                        onChange={(e) => setAiModel(e.target.value)}
+                        placeholder="gpt-4o-mini"
+                      />
+                    </label>
+                    <label className="field">
+                      <span className="field-label">
+                        Base URL{meta.defaultUrl ? " (optional)" : ""}
+                      </span>
+                      <input
+                        className="input input--mono"
+                        value={aiBaseUrl}
+                        onChange={(e) => setAiBaseUrl(e.target.value)}
+                        placeholder={meta.defaultUrl || "https://your-endpoint/v1"}
+                      />
+                    </label>
+                    <label className="field">
+                      <span className="field-label">
+                        API key{aiHasKey ? " · saved" : meta.needsKey ? "" : " (not required)"}
+                      </span>
+                      <input
+                        className="input input--mono"
+                        type="password"
+                        value={aiKey}
+                        onChange={(e) => setAiKey(e.target.value)}
+                        placeholder={
+                          aiHasKey
+                            ? "•••••••• — leave blank to keep"
+                            : meta.needsKey
+                              ? "sk-…"
+                              : "not needed for local providers"
+                        }
+                      />
+                    </label>
+                  </div>
+                  {aiMsg ? (
+                    <p
+                      className={aiMsg.ok ? "form-ok" : "form-error"}
+                      role={aiMsg.ok ? "status" : "alert"}
+                    >
+                      {aiMsg.text}
+                    </p>
+                  ) : null}
+                  <div className="form-actions">
+                    <button type="submit" className="btn btn--primary" disabled={aiBusy !== null}>
+                      {aiBusy === "save" ? "Saving…" : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn--ghost"
+                      onClick={testAi}
+                      disabled={aiBusy !== null}
+                    >
+                      {aiBusy === "test" ? "Testing…" : "Test connection"}
+                    </button>
+                  </div>
+                </form>
               </div>
             </>
           ) : null}
