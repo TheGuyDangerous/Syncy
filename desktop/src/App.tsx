@@ -11,6 +11,7 @@ import Folders from "./screens/Folders";
 import Conflicts from "./screens/Conflicts";
 import Placeholder from "./screens/Placeholder";
 import Settings from "./screens/Settings";
+import Versions from "./screens/Versions";
 
 initTheme();
 
@@ -71,15 +72,7 @@ function screenFor(view: View) {
         />
       );
     case "versions":
-      return (
-        <Placeholder
-          title="Versions"
-          description="Earlier copies of files, kept when changes sync in."
-          icon="versions"
-          emptyTitle="No versions yet"
-          emptyHint="When a synced file changes, its previous copy is kept here."
-        />
-      );
+      return <Versions />;
     case "conflicts":
       return <Conflicts />;
     case "logs":
