@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/TheGuyDangerous/Syncy/engine/internal/chunker"
+	"github.com/TheGuyDangerous/Syncy/engine/internal/hashing"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/identity"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/scanner"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/transport"
@@ -198,6 +199,66 @@ func readFileAt(t *testing.T, path string) string {
 		t.Fatalf("ReadFile %s: %v", path, err)
 	}
 	return string(b)
+}
+
+func TestPullCreatesConflictCopy(t *testing.T) {
+	src, dst := t.TempDir(), t.TempDir()
+	writeFile(t, src, "doc.txt", []byte("remote edit"))
+	writeFile(t, dst, "doc.txt", []byte("local edit"))
+	baseline := map[string]hashing.Hash{"doc.txt": hashing.OfBytes([]byte("common ancestor"))}
+
+	stats := syncDirs(t, src, dst, WithBaseline(baseline), WithConflictNaming("MYDEVICE"))
+
+	if stats.Conflicts != 1 {
+		t.Errorf("Conflicts = %d, want 1", stats.Conflicts)
+	}
+	if got := readFileAt(t, filepath.Join(dst, "doc.txt")); got != "local edit" {
+		t.Errorf("local file must be preserved, got %q", got)
+	}
+	matches, err := filepath.Glob(filepath.Join(dst, "doc.sync-conflict-*.txt"))
+	if err != nil {
+		t.Fatalf("Glob: %v", err)
+	}
+	if len(matches) != 1 {
+		t.Fatalf("expected 1 conflict copy, found %d", len(matches))
+	}
+	if got := readFileAt(t, matches[0]); got != "remote edit" {
+		t.Errorf("conflict copy content = %q, want %q", got, "remote edit")
+	}
+}
+
+func TestPullTakesRemoteWhenLocalUnchanged(t *testing.T) {
+	src, dst := t.TempDir(), t.TempDir()
+	writeFile(t, src, "doc.txt", []byte("remote edit"))
+	writeFile(t, dst, "doc.txt", []byte("ancestor"))
+	baseline := map[string]hashing.Hash{"doc.txt": hashing.OfBytes([]byte("ancestor"))}
+
+	stats := syncDirs(t, src, dst, WithBaseline(baseline), WithConflictNaming("D"))
+
+	if stats.Conflicts != 0 {
+		t.Errorf("Conflicts = %d, want 0", stats.Conflicts)
+	}
+	assertSameFile(t, src, dst, "doc.txt")
+	matches, _ := filepath.Glob(filepath.Join(dst, "doc.sync-conflict-*.txt"))
+	if len(matches) != 0 {
+		t.Errorf("no conflict copy expected, found %d", len(matches))
+	}
+}
+
+func TestPullKeepsLocalWhenRemoteStale(t *testing.T) {
+	src, dst := t.TempDir(), t.TempDir()
+	writeFile(t, src, "doc.txt", []byte("ancestor"))
+	writeFile(t, dst, "doc.txt", []byte("local edit"))
+	baseline := map[string]hashing.Hash{"doc.txt": hashing.OfBytes([]byte("ancestor"))}
+
+	stats := syncDirs(t, src, dst, WithBaseline(baseline), WithConflictNaming("D"))
+
+	if stats.FilesUpdated != 0 {
+		t.Errorf("FilesUpdated = %d, want 0 (local is ahead)", stats.FilesUpdated)
+	}
+	if got := readFileAt(t, filepath.Join(dst, "doc.txt")); got != "local edit" {
+		t.Errorf("local file must be preserved, got %q", got)
+	}
 }
 
 func TestPullSkipsUpToDateFiles(t *testing.T) {
