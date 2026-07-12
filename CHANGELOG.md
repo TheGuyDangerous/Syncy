@@ -67,6 +67,9 @@ reaches its first release.
 - `versioning` package: keeps recoverable, timestamped copies of files before
   they are overwritten or deleted, with listing, restore and pruning to a
   configurable maximum number of versions per file.
+- `conflict` package: per-file version vectors that classify two file histories
+  as equal, one ahead of the other, or concurrent (a real conflict), plus
+  merge and conflict-copy naming.
 - Release pipeline now builds **native installers** with Tauri for Windows
   (NSIS/MSI), macOS (`.dmg`) and Linux (`.deb`/`.AppImage`) and attaches them to
   the GitHub pre-release, replacing the earlier raw engine archives.
