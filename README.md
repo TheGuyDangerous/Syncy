@@ -7,6 +7,7 @@
 Keep your folders in sync across Windows, macOS, Linux and Android — with no cloud, no subscription and no one in the middle. Your data stays on your devices.
 
 [![CI](https://github.com/TheGuyDangerous/Syncy/actions/workflows/ci.yml/badge.svg)](https://github.com/TheGuyDangerous/Syncy/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/TheGuyDangerous/Syncy?include_prereleases&sort=semver&label=release)](https://github.com/TheGuyDangerous/Syncy/releases)
 [![License: MPL-2.0](https://img.shields.io/badge/License-MPL_2.0-brightgreen.svg)](./LICENSE)
 [![Go](https://img.shields.io/badge/engine-Go-00ADD8.svg?logo=go&logoColor=white)](https://go.dev)
 [![Desktop](https://img.shields.io/badge/desktop-Tauri-24C8DB.svg?logo=tauri&logoColor=white)](https://tauri.app)
@@ -142,7 +143,7 @@ git clone https://github.com/TheGuyDangerous/Syncy.git
 cd Syncy
 ```
 
-Developer setup, prerequisites and per‑component build steps live in [CONTRIBUTING.md](./CONTRIBUTING.md).
+Early pre‑release builds of the engine daemon (`syncyd`) for Windows, macOS and Linux are published on the [Releases](https://github.com/TheGuyDangerous/Syncy/releases) page. Developer setup, prerequisites and per‑component build steps live in [CONTRIBUTING.md](./CONTRIBUTING.md); how releases are cut is documented in [docs/RELEASING.md](./docs/RELEASING.md).
 
 ## Roadmap
 
