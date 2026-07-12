@@ -73,6 +73,9 @@ reaches its first release.
 - Durable offline operation queue in the metadata store (schema v2): pending
   operations for a device are persisted and can be listed, retried and
   completed, so work survives restarts and replays when a peer reconnects.
+- The sync session can now archive a file into the version store before it is
+  overwritten (`session.WithVersioning`), so an incoming change never silently
+  discards the previous content.
 - Release pipeline now builds **native installers** with Tauri for Windows
   (NSIS/MSI), macOS (`.dmg`) and Linux (`.deb`/`.AppImage`) and attaches them to
   the GitHub pre-release, replacing the earlier raw engine archives.
