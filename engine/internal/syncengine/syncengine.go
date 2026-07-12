@@ -110,3 +110,44 @@ func indexHashes(idx *scanner.Index) map[string]hashing.Hash {
 	}
 	return out
 }
+
+type Conflict struct {
+	FolderID string `json:"folder_id"`
+	Path     string `json:"path"`
+}
+
+func (e *Engine) Conflicts() ([]Conflict, error) {
+	folders, err := e.store.ListFolders()
+	if err != nil {
+		return nil, err
+	}
+	var out []Conflict
+	for _, f := range folders {
+		err := filepath.WalkDir(f.Path, func(path string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() {
+				return nil
+			}
+			if strings.Contains(d.Name(), ".sync-conflict-") {
+				rel, err := filepath.Rel(f.Path, path)
+				if err != nil {
+					return err
+				}
+				out = append(out, Conflict{FolderID: f.ID, Path: filepath.ToSlash(rel)})
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
+func (e *Engine) FolderVersions(folderID, relPath string) ([]versioning.Version, error) {
+	folder, err := e.store.GetFolder(folderID)
+	if err != nil {
+		return nil, err
+	}
+	store := versioning.New(filepath.Join(folder.Path, versionsDir), maxVersions)
+	return store.Versions(relPath)
+}
