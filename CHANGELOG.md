@@ -44,6 +44,11 @@ reaches its first release.
 - `monitor` package: ties the watcher, scanner and diff together into a live
   stream of change sets for a folder, with a baseline index on startup. Tested
   end-to-end for create, delete and rename detection.
-- Release pipeline: a GitHub Actions workflow that, on version tags, cross-builds
-  the `syncyd` daemon for Windows, macOS and Linux (amd64/arm64), publishes
-  SHA-256 checksums, and creates a GitHub pre-release with the archives.
+- `identity` package: per-device Ed25519 identity with a device ID derived from
+  the public key, PKCS#8 persistence, a self-signed TLS certificate, and
+  mutual-TLS configs that authenticate peers by pinning their device ID.
+- Desktop application scaffold (`desktop/`): Tauri 2 shell with a React +
+  TypeScript front-end and a dark, minimal window.
+- Release pipeline now builds **native installers** with Tauri for Windows
+  (NSIS/MSI), macOS (`.dmg`) and Linux (`.deb`/`.AppImage`) and attaches them to
+  the GitHub pre-release, replacing the earlier raw engine archives.

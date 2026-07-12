@@ -19,7 +19,7 @@ Keep your folders in sync across Windows, macOS, Linux and Android — with no c
 > [!NOTE]
 > **Status: early development (pre‑alpha).** Syncy is being built in the open, milestone by milestone. This README documents the target architecture and tracks what is actually implemented — see the [feature status](#features) and [roadmap](./ROADMAP.md). Features are only ticked once they are implemented **and tested**.
 >
-> **Implemented so far (M0–M2):** the engine core — SHA‑256 content identifiers, content‑defined chunking, the SQLite metadata store, a folder scanner with rename/move/delete‑aware index diffing, and a native recursive filesystem watcher with a live folder monitor — all unit‑tested and green on Windows, macOS and Linux CI. **Next up (M3):** the DeltaSync Protocol over QUIC with device identity and TLS.
+> **Implemented so far:** the engine core (SHA‑256 content identifiers, content‑defined chunking, SQLite metadata store), a folder scanner with rename/move/delete‑aware index diffing, a native recursive filesystem watcher with a live folder monitor, and per‑device **Ed25519 identity with mutual TLS** — all unit‑tested and green on Windows, macOS and Linux CI. The **desktop app** (Tauri) shell builds into native installers. **Next up:** the DeltaSync Protocol over QUIC, then wiring the engine into the desktop and mobile clients.
 
 ---
 
