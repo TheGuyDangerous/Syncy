@@ -16,5 +16,5 @@ versioned independently of the desktop engine and lives on the `flutter` branch.
 - Settings screen with connection details and a disconnect action.
 - Material 3 dark theme sharing the desktop's status colour vocabulary and a
   monospace treatment for device identifiers.
-- Continuous integration: analyze, test, and a debug APK build uploaded as an
-  artifact on every push and pull request.
+- Continuous integration: analyze, test, and per-architecture debug APK builds
+  (`--split-per-abi`) uploaded as artifacts on every push and pull request.
