@@ -39,3 +39,8 @@ reaches its first release.
 - `scanner.Diff`: compares two indexes into a deterministic change set
   (added / modified / deleted) and detects renames and moves by matching
   identical non-empty content, so a moved file transfers no data.
+- `fswatch` package: a native, recursive filesystem watcher (fsnotify) that
+  picks up new subdirectories and emits debounced batches of changed paths.
+- `monitor` package: ties the watcher, scanner and diff together into a live
+  stream of change sets for a folder, with a baseline index on startup. Tested
+  end-to-end for create, delete and rename detection.
