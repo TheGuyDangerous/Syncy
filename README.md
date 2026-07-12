@@ -30,3 +30,13 @@ flutter run
 ```
 
 Requires Flutter 3.24+ and the Android SDK. Build per-architecture debug APKs with `flutter build apk --debug --split-per-abi`.
+
+## Releases
+
+Syncy publishes one release stream that carries both the Android APKs and the desktop installers. To cut a mobile release, bump `version:` in `pubspec.yaml`, then tag a `flutter` commit:
+
+```bash
+git tag v0.4 && git push origin v0.4
+```
+
+CI builds the per-architecture release APKs (`syncy-mobile-<version>-<abi>.apk`), reuses the latest desktop installers from the previous release unchanged, and publishes them together. The desktop side is released the same way from `main`. See `RELEASING.md` on the `main` branch for the full model.
