@@ -62,6 +62,8 @@ reaches its first release.
 - Desktop **system tray** with a menu (Open, Quit) and left‑click to open the
   window, plus **close‑to‑tray**: closing the window hides it and keeps the
   engine running in the background, so only Quit fully exits.
+- Desktop **launch at login**: a "Start Syncy at login" toggle in Settings →
+  General registers/unregisters the app to start in the background at sign‑in.
 - `transport` package: authenticated QUIC transport (quic-go) built on the
   device identity's mutual-TLS configs. Connections expose the peer's device ID
   and multiplexed streams. Tested with a loopback handshake, peer-ID
