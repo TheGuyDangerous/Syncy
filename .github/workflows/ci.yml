@@ -84,4 +84,10 @@ jobs:
 
       - name: Test
         if: steps.detect.outputs.exists == 'true'
-        run: cd engine && go test -race -count=1 ./...
+        run: cd engine && go test -count=1 ./...
+
+      # The race detector needs cgo and a C toolchain, which is reliably
+      # available on the Linux runner; run it there to guard concurrency bugs.
+      - name: Test (race detector)
+        if: steps.detect.outputs.exists == 'true' && runner.os == 'Linux'
+        run: cd engine && CGO_ENABLED=1 go test -race -count=1 ./...
