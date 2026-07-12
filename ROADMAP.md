@@ -13,10 +13,10 @@ Go module and `syncyd` skeleton; SHA‑256 content identifiers (`hashing`); dete
 ## M2 — Filesystem watcher & scanner ✅
 Native recursive watcher (fsnotify, no polling); folder scanner producing a content‑addressed index; deterministic index diffing with rename/move/delete detection; a folder monitor that streams live change sets. All tested and green on Windows, macOS and Linux.
 
-## M3 — DeltaSync Protocol & transport 🚧 (next)
-Device identity (Ed25519); TLS 1.3 over QUIC; DSP message framing; metadata reconciliation; block request/response; resume; integrity verification; replay protection. Tests for malformed/corrupted packets.
+## M3 — DeltaSync Protocol & transport ✅
+Ed25519 device identity with mutual TLS; authenticated QUIC transport; the DeltaSync Protocol framing and messages; and a reconciliation session that syncs real files between two peers — pulling missing files, reusing local blocks by hash (delta + dedup), verifying block and whole‑file integrity, and atomically replacing files. Tested with two‑node loopback sync and malformed‑frame handling.
 
-## M4 — Sync engine, conflicts & versioning ⬜
+## M4 — Sync engine, conflicts & versioning 🚧 (next)
 Orchestration of scan → reconcile → transfer → apply; version‑vector conflict detection & resolution; version history with rollback; durable offline queue.
 
 ## M5 — Discovery & daemon ⬜
