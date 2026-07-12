@@ -84,6 +84,11 @@ reaches its first release.
   when both sides changed a file since the last sync, the incoming version is
   written as a `.sync-conflict-…` copy instead of overwriting local changes; a
   file only changed on one side fast-forwards, and a locally-ahead file is kept.
+- Persisted last-synced baseline (metadata schema v3) wired into `Engine.Sync`,
+  which scans a folder, converges with a peer using the baseline for conflict
+  detection and version history, then records the new baseline. A two-round
+  integration test verifies baselines persist and concurrent edits produce a
+  conflict copy — completing the sync engine (M4).
 - Release pipeline now builds **native installers** with Tauri for Windows
   (NSIS/MSI), macOS (`.dmg`) and Linux (`.deb`/`.AppImage`) and attaches them to
   the GitHub pre-release, replacing the earlier raw engine archives.
