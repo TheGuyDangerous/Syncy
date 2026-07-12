@@ -28,6 +28,8 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "publisher": "GuyDangerous Studios",
+    "copyright": "Copyright © 2026 GuyDangerous Studios",
     "category": "Utility",
     "shortDescription": "Local-first P2P folder sync",
     "longDescription": "Syncy is a fast, secure, local-first peer-to-peer folder synchronization engine.",
