@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { getThemePref, setThemePref, type ThemePref } from "../lib/theme";
 import { Screen } from "../components/Screen";
 import { Icon } from "../components/Icon";
@@ -83,16 +84,34 @@ export default function Settings() {
   const [pModel, setPModel] = useState("");
   const [pError, setPError] = useState<string | null>(null);
   const [version, setVersion] = useState<string | null>(null);
+  const [autostart, setAutostart] = useState(false);
 
   useEffect(() => {
     invoke<string>("app_version")
       .then(setVersion)
       .catch(() => setVersion("dev"));
+    isEnabled()
+      .then(setAutostart)
+      .catch(() => setAutostart(false));
   }, []);
 
   function chooseTheme(pref: ThemePref) {
     setThemePref(pref);
     setTheme(pref);
+  }
+
+  async function toggleAutostart() {
+    try {
+      if (autostart) {
+        await disable();
+        setAutostart(false);
+      } else {
+        await enable();
+        setAutostart(true);
+      }
+    } catch {
+      setAutostart((v) => v);
+    }
   }
 
   function persist(next: AiProvider[]) {
@@ -156,11 +175,26 @@ export default function Settings() {
         <div className="settings-body">
           {section === "general" ? (
             <>
-              <SectionHeader title="General" desc="Startup, notifications, and language." />
-              <NoteCard
-                name="Nothing to configure yet"
-                hint="Startup, notification, and language options land here in a later release."
-              />
+              <SectionHeader title="General" desc="Startup and background behavior." />
+              <div className="card">
+                <div className="setting-row">
+                  <div>
+                    <p className="setting-name">Start Syncy at login</p>
+                    <p className="setting-hint">
+                      Launch in the background when you sign in, so your folders keep syncing.
+                    </p>
+                  </div>
+                  <label className="switch">
+                    <input
+                      type="checkbox"
+                      checked={autostart}
+                      onChange={toggleAutostart}
+                      aria-label="Start Syncy at login"
+                    />
+                    <span className="switch-track" />
+                  </label>
+                </div>
+              </div>
             </>
           ) : null}
 
