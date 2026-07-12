@@ -57,17 +57,37 @@ type Stats struct {
 	Conflicts     int
 }
 
-func Serve(ctx context.Context, conn *transport.Conn, folder Folder) error {
+// FolderSource resolves a folder by ID so one connection can serve any of the
+// folders a device shares.
+type FolderSource func(folderID string) (Folder, bool)
+
+func SingleFolder(f Folder) FolderSource {
+	return func(id string) (Folder, bool) {
+		if id == f.ID {
+			return f, true
+		}
+		return Folder{}, false
+	}
+}
+
+func Folders(folders map[string]Folder) FolderSource {
+	return func(id string) (Folder, bool) {
+		f, ok := folders[id]
+		return f, ok
+	}
+}
+
+func Serve(ctx context.Context, conn *transport.Conn, source FolderSource) error {
 	for {
 		s, err := conn.AcceptStream(ctx)
 		if err != nil {
 			return err
 		}
-		go serveStream(s, folder)
+		go serveStream(s, source)
 	}
 }
 
-func serveStream(s transport.Stream, folder Folder) {
+func serveStream(s transport.Stream, source FolderSource) {
 	defer s.Close()
 	frame, err := protocol.ReadFrame(s)
 	if err != nil {
@@ -75,6 +95,14 @@ func serveStream(s transport.Stream, folder Folder) {
 	}
 	switch frame.Type {
 	case protocol.TypeFolderSummary:
+		var req protocol.FolderSummary
+		if err := protocol.Decode(frame, &req); err != nil {
+			return
+		}
+		folder, ok := source(req.FolderID)
+		if !ok {
+			return
+		}
 		_ = protocol.WriteMessage(s, protocol.TypeIndexUpdate, protocol.IndexUpdate{
 			FolderID: folder.ID,
 			Files:    indexToFileMeta(folder.Index),
@@ -83,6 +111,10 @@ func serveStream(s transport.Stream, folder Folder) {
 	case protocol.TypeBlockRequest:
 		var req protocol.BlockRequest
 		if err := protocol.Decode(frame, &req); err != nil {
+			return
+		}
+		folder, ok := source(req.FolderID)
+		if !ok {
 			return
 		}
 		serveBlocks(s, folder.Dir, req)

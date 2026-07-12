@@ -96,6 +96,8 @@ reaches its first release.
 - `discovery` package: LAN‑first device discovery over mDNS / DNS‑SD — a device
   advertises its ID and QUIC port and browses for peers, so devices find each
   other with no configuration.
+- `session.Serve` now dispatches by the requested folder (`FolderSource`), so a
+  single connection can serve every folder a device shares.
 - Release pipeline now builds **native installers** with Tauri for Windows
   (NSIS/MSI), macOS (`.dmg`) and Linux (`.deb`/`.AppImage`) and attaches them to
   the GitHub pre-release, replacing the earlier raw engine archives.

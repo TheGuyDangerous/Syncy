@@ -52,7 +52,7 @@ func (e *Engine) Devices() ([]core.Device, error) { return e.store.ListDevices()
 // it, so both sides move toward the union of their newest files. The caller must
 // keep ctx (and the connection) alive until convergence with the peer completes.
 func Converge(ctx context.Context, conn *transport.Conn, folder session.Folder, opts ...session.Option) (session.Stats, error) {
-	go func() { _ = session.Serve(ctx, conn, folder) }()
+	go func() { _ = session.Serve(ctx, conn, session.SingleFolder(folder)) }()
 	return session.Pull(ctx, conn, folder.ID, folder.Dir, folder.Index, opts...)
 }
 
