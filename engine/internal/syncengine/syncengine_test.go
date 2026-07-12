@@ -154,6 +154,78 @@ func TestEngineFolderManagement(t *testing.T) {
 	}
 }
 
+func runSync(t *testing.T, ctx context.Context, idA, idB *identity.Identity, engA, engB *Engine, folderID string) {
+	t.Helper()
+	ln, err := transport.Listen(idA, "127.0.0.1:0", nil)
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer ln.Close()
+
+	errA := make(chan error, 1)
+	go func() {
+		conn, err := ln.Accept(ctx)
+		if err != nil {
+			errA <- err
+			return
+		}
+		_, err = engA.Sync(ctx, conn, folderID)
+		errA <- err
+	}()
+
+	connB, err := transport.Dial(ctx, idB, ln.Addr().String(), nil)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer connB.Close()
+
+	if _, err := engB.Sync(ctx, connB, folderID); err != nil {
+		t.Fatalf("engB.Sync: %v", err)
+	}
+	if err := <-errA; err != nil {
+		t.Fatalf("engA.Sync: %v", err)
+	}
+}
+
+func TestEngineSyncBaselineAndConflict(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	dirA, dirB := t.TempDir(), t.TempDir()
+	idA, _ := identity.Generate()
+	idB, _ := identity.Generate()
+	storeA, _ := metadata.OpenMemory()
+	storeB, _ := metadata.OpenMemory()
+	t.Cleanup(func() { storeA.Close(); storeB.Close() })
+	engA, engB := New(idA, storeA), New(idB, storeB)
+
+	if err := engA.AddFolder(core.Folder{ID: "f", Path: dirA}); err != nil {
+		t.Fatalf("AddFolder A: %v", err)
+	}
+	if err := engB.AddFolder(core.Folder{ID: "f", Path: dirB}); err != nil {
+		t.Fatalf("AddFolder B: %v", err)
+	}
+
+	writeFile(t, dirA, "file.txt", []byte("v1"))
+	runSync(t, ctx, idA, idB, engA, engB, "f")
+
+	assertFile(t, dirB, "file.txt", []byte("v1"))
+	base, _ := storeB.GetSyncedBaseline("f")
+	if _, ok := base["file.txt"]; !ok {
+		t.Fatal("baseline should record file.txt after the first sync")
+	}
+
+	writeFile(t, dirA, "file.txt", []byte("edit-from-A"))
+	writeFile(t, dirB, "file.txt", []byte("edit-from-B"))
+	runSync(t, ctx, idA, idB, engA, engB, "f")
+
+	matches, _ := filepath.Glob(filepath.Join(dirB, "file.sync-conflict-*.txt"))
+	if len(matches) == 0 {
+		t.Error("expected a conflict copy on B after concurrent edits on both sides")
+	}
+	assertFile(t, dirB, "file.txt", []byte("edit-from-B"))
+}
+
 func TestEngineDeviceManagement(t *testing.T) {
 	e := newEngine(t)
 	if err := e.AddDevice(core.Device{ID: "peer-1", Name: "phone"}); err != nil {
