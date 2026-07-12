@@ -18,3 +18,8 @@ reaches its first release.
 - `hashing` package: SHA-256 content identifiers (`Hash`) with helpers to hash
   bytes, strings, readers and files, plus hex parsing and text marshalling for
   storage. Verified against known SHA-256 test vectors.
+- `chunker` package: deterministic content-defined chunking using a rolling
+  gear hash with configurable Min/Avg/Max sizes. Streams with bounded memory
+  and is shift-resistant, so a small edit only re-chunks nearby data — the
+  basis for block-level delta sync. Tested for coverage, size bounds,
+  determinism, streaming/byte parity and shift resistance.
