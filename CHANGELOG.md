@@ -64,6 +64,9 @@ reaches its first release.
   engine running in the background, so only Quit fully exits.
 - Desktop **launch at login**: a "Start Syncy at login" toggle in Settings →
   General registers/unregisters the app to start in the background at sign‑in.
+- Desktop **Versions** screen: pick a folder and a file path to browse the
+  recovered earlier copies of that file (timestamp, size, when it changed),
+  wired to the engine's version history. Completes the desktop app (M6).
 - `transport` package: authenticated QUIC transport (quic-go) built on the
   device identity's mutual-TLS configs. Connections expose the peer's device ID
   and multiplexed streams. Tested with a loopback handshake, peer-ID

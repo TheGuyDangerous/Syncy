@@ -22,10 +22,10 @@ Bidirectional convergence over a connection; version history with rollback; vers
 ## M5 — Discovery & daemon ✅
 mDNS LAN‑first discovery; a token‑authenticated local HTTP control API; and the `syncyd` daemon that ties it together — identity, metadata, QUIC listener (trusted peers only), discovery‑driven sync, and the control API, with graceful shutdown.
 
-## M6 — Desktop app (Tauri) 🚧 (next)
-Premium, dark‑first UI: system‑tray background service with status colors, popover, dashboard, devices, folders, transfers, history, versions, conflicts, logs, settings (incl. Integrations). Close‑to‑tray; launch on startup.
+## M6 — Desktop app (Tauri) ✅
+Premium, dark‑first UI wired to the daemon: the engine ships as a bundled sidecar; a system‑tray background service with close‑to‑tray; a sidebar app shell; Dashboard, Devices, Folders (add/remove), Conflicts, Versions and Settings (theme, AI‑provider BYOK, launch‑at‑startup) screens; Transfers/History/Logs as placeholders pending live feeds.
 
-## M7 — Mobile app (Flutter, Android) ⬜
+## M7 — Mobile app (Flutter, Android) 🚧 (next)
 Companion app on the `flutter` branch: pairing, folder selection (media/downloads/documents/custom), manual + automatic + background sync, progress, history, notifications.
 
 ## M8 — CI/CD & packaging ⬜
