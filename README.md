@@ -29,4 +29,4 @@ flutter pub get
 flutter run
 ```
 
-Requires Flutter 3.24+ and the Android SDK. Build a debug APK with `flutter build apk --debug`.
+Requires Flutter 3.24+ and the Android SDK. Build per-architecture debug APKs with `flutter build apk --debug --split-per-abi`.
