@@ -44,6 +44,42 @@ export interface NewFolder {
   direction?: Direction;
 }
 
+export type AiKind =
+  | "openai"
+  | "anthropic"
+  | "gemini"
+  | "openrouter"
+  | "ollama"
+  | "lmstudio"
+  | "custom";
+
+export interface AiConfigView {
+  enabled: boolean;
+  kind: AiKind;
+  base_url: string;
+  model: string;
+  has_api_key: boolean;
+}
+
+export interface AiConfigInput {
+  enabled: boolean;
+  kind: AiKind;
+  base_url: string;
+  model: string;
+  api_key: string;
+}
+
+export interface ConflictDetails {
+  folder: string;
+  path: string;
+  local_device?: string;
+  remote_device?: string;
+  local_modified?: string;
+  remote_modified?: string;
+  local_size?: number;
+  remote_size?: number;
+}
+
 export class ApiError extends Error {}
 
 interface DaemonInfo {
@@ -106,6 +142,21 @@ export const api = {
     request<FileVersion[]>(
       `/folders/${encodeURIComponent(folderId)}/versions?path=${encodeURIComponent(relPath)}`,
     ),
+  aiConfig: () => request<AiConfigView>("/ai"),
+  saveAiConfig: (cfg: AiConfigInput) =>
+    request<AiConfigView>("/ai", { method: "PUT", body: JSON.stringify(cfg) }),
+  testAi: (cfg: AiConfigInput) =>
+    request<{ ok: boolean }>("/ai/test", { method: "POST", body: JSON.stringify(cfg) }),
+  explainConflict: (details: ConflictDetails) =>
+    request<{ text: string }>("/ai/explain-conflict", {
+      method: "POST",
+      body: JSON.stringify(details),
+    }),
+  analyzeLogs: (logs: string) =>
+    request<{ text: string }>("/ai/analyze-logs", {
+      method: "POST",
+      body: JSON.stringify({ logs }),
+    }),
 };
 
 export function errorMessage(e: unknown): string {

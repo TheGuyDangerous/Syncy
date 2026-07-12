@@ -478,6 +478,29 @@ textarea {
   border-top: 1px solid var(--border);
 }
 
+.row--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.row-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.conflict-note {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  white-space: pre-wrap;
+}
+
 .row-icon {
   width: 32px;
   height: 32px;
@@ -796,6 +819,11 @@ textarea {
 .form-error {
   font-size: 12px;
   color: var(--danger);
+}
+
+.form-ok {
+  font-size: 12px;
+  color: var(--ok);
 }
 
 .form-actions {
