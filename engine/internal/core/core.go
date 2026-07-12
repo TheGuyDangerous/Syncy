@@ -6,11 +6,11 @@ import "time"
 type DeviceID string
 
 type Device struct {
-	ID       DeviceID
-	Name     string
-	Trusted  bool
-	LastSeen time.Time
-	AddedAt  time.Time
+	ID       DeviceID  `json:"id"`
+	Name     string    `json:"name"`
+	Trusted  bool      `json:"trusted"`
+	LastSeen time.Time `json:"last_seen"`
+	AddedAt  time.Time `json:"added_at"`
 }
 
 type SyncDirection string
@@ -31,12 +31,12 @@ func (d SyncDirection) Valid() bool {
 }
 
 type Folder struct {
-	ID        string
-	Label     string
-	Path      string
-	Direction SyncDirection
-	Paused    bool
-	AddedAt   time.Time
+	ID        string        `json:"id"`
+	Label     string        `json:"label"`
+	Path      string        `json:"path"`
+	Direction SyncDirection `json:"direction"`
+	Paused    bool          `json:"paused"`
+	AddedAt   time.Time     `json:"added_at"`
 }
 
 type QueuedOp struct {
