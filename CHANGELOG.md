@@ -49,6 +49,10 @@ reaches its first release.
   mutual-TLS configs that authenticate peers by pinning their device ID.
 - Desktop application scaffold (`desktop/`): Tauri 2 shell with a React +
   TypeScript front-end and a dark, minimal window.
+- `transport` package: authenticated QUIC transport (quic-go) built on the
+  device identity's mutual-TLS configs. Connections expose the peer's device ID
+  and multiplexed streams. Tested with a loopback handshake, peer-ID
+  verification, bidirectional data exchange and peer rejection.
 - Release pipeline now builds **native installers** with Tauri for Windows
   (NSIS/MSI), macOS (`.dmg`) and Linux (`.deb`/`.AppImage`) and attaches them to
   the GitHub pre-release, replacing the earlier raw engine archives.
