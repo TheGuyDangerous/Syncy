@@ -65,6 +65,18 @@ var migrations = [][]string{
 			added_at  INTEGER NOT NULL DEFAULT 0
 		)`,
 	},
+	{
+		`CREATE TABLE queue (
+			id         INTEGER PRIMARY KEY AUTOINCREMENT,
+			device_id  TEXT    NOT NULL,
+			folder_id  TEXT    NOT NULL DEFAULT '',
+			kind       TEXT    NOT NULL,
+			payload    TEXT    NOT NULL DEFAULT '',
+			created_at INTEGER NOT NULL DEFAULT 0,
+			attempts   INTEGER NOT NULL DEFAULT 0
+		)`,
+		`CREATE INDEX idx_queue_device ON queue(device_id, id)`,
+	},
 }
 
 func (s *Store) migrate() error {
