@@ -44,3 +44,6 @@ reaches its first release.
 - `monitor` package: ties the watcher, scanner and diff together into a live
   stream of change sets for a folder, with a baseline index on startup. Tested
   end-to-end for create, delete and rename detection.
+- Release pipeline: a GitHub Actions workflow that, on version tags, cross-builds
+  the `syncyd` daemon for Windows, macOS and Linux (amd64/arm64), publishes
+  SHA-256 checksums, and creates a GitHub pre-release with the archives.
