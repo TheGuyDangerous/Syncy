@@ -125,6 +125,15 @@ reaches its first release.
   Completes the daemon and M5.
 
 ### Security
+- Hardened against **path traversal** (CodeQL `go/path-injection`): a new `fsafe`
+  helper rejects non-local paths (absolute or `..`-escaping), and the sync
+  session and version store now validate every incoming file path before any
+  filesystem operation, so a malicious peer or request can't read or write
+  outside a shared folder. Makes the directory-traversal protection real, not
+  just claimed.
+- Documented that the TLS `InsecureSkipVerify` CodeQL alerts are false positives:
+  peers are authenticated by pinning the Ed25519 device ID via a mandatory
+  `VerifyPeerCertificate`, not by CA-chain validation.
 - Documented the `glib` < 0.20 `VariantStrIter` advisory (moderate) as a known
   issue: it reaches us only transitively through Tauri's Linux WebKitGTK stack,
   has no compatible upstream fix yet (Tauri pins gtk-rs 0.18), affects Linux
