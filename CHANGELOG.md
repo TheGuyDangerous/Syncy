@@ -53,6 +53,12 @@ reaches its first release.
   compiles the Go daemon for the host target triple, the app spawns it on
   startup pointing at a per-user data directory, and a `daemon_info` command
   exposes the local control API base URL and token to the front-end.
+- Desktop UI foundation: a premium, dark‑first (light‑capable) interface — a
+  typed control‑API client with graceful offline handling, an app shell with a
+  sidebar (Dashboard, Devices, Folders, Transfers, History, Versions, Conflicts,
+  Logs, Settings), a status‑colour design system, and working Dashboard,
+  Folders (add/remove), Devices, Conflicts and Settings (theme, AI‑provider
+  BYOK, about) screens wired to the daemon.
 - `transport` package: authenticated QUIC transport (quic-go) built on the
   device identity's mutual-TLS configs. Connections expose the peer's device ID
   and multiplexed streams. Tested with a loopback handshake, peer-ID
