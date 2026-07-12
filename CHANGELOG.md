@@ -152,3 +152,12 @@ reaches its first release.
   vice versa. See `RELEASING.md`.
 - CI gained a desktop job that builds the engine sidecar, compiles the frontend,
   and type-checks the Tauri shell on every push and pull request.
+- `ai` package: an optional, bring-your-own-key assistant that can explain a
+  sync conflict and summarize engine logs. It speaks the OpenAI, Anthropic and
+  Gemini API shapes, covering OpenAI, OpenRouter, Ollama, LM Studio, a custom
+  OpenAI-compatible endpoint (all one shape), Anthropic and Gemini. It is
+  disabled by default and fully isolated — the sync engine never depends on it.
+  Tested against mocked providers with no network or real keys.
+- Control API gained AI routes: read/save the provider config (the API key is
+  never returned and is kept across saves), test a connection, explain a
+  conflict, and analyze logs. Config is persisted to `ai.json` in the data dir.
