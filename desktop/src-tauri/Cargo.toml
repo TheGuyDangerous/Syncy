@@ -2,7 +2,7 @@
 name = "desktop"
 version = "0.1.0"
 description = "Syncy desktop application"
-authors = ["TheGuyDangerous"]
+authors = ["GuyDangerous Studios"]
 edition = "2021"
 
 [lib]
