@@ -1,0 +1,93 @@
+package metadata
+
+import (
+	"database/sql"
+	"errors"
+
+	"github.com/TheGuyDangerous/Syncy/engine/internal/core"
+)
+
+// PutDevice inserts or updates a device by ID. The added_at timestamp is set on
+// first insert and preserved on subsequent updates.
+func (s *Store) PutDevice(d core.Device) error {
+	if d.ID == "" {
+		return errors.New("metadata: device ID must not be empty")
+	}
+	_, err := s.db.Exec(
+		`INSERT INTO devices (id, name, trusted, last_seen, added_at)
+		 VALUES (?, ?, ?, ?, ?)
+		 ON CONFLICT(id) DO UPDATE SET
+		     name      = excluded.name,
+		     trusted   = excluded.trusted,
+		     last_seen = excluded.last_seen`,
+		string(d.ID), d.Name, boolToInt(d.Trusted), unixOrZero(d.LastSeen), unixOrZero(d.AddedAt),
+	)
+	return err
+}
+
+// GetDevice returns the device with the given ID, or ErrNotFound.
+func (s *Store) GetDevice(id core.DeviceID) (core.Device, error) {
+	row := s.db.QueryRow(
+		`SELECT id, name, trusted, last_seen, added_at FROM devices WHERE id = ?`,
+		string(id),
+	)
+	d, err := scanDevice(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return core.Device{}, ErrNotFound
+	}
+	return d, err
+}
+
+// ListDevices returns all known devices, ordered by when they were added.
+func (s *Store) ListDevices() ([]core.Device, error) {
+	rows, err := s.db.Query(
+		`SELECT id, name, trusted, last_seen, added_at FROM devices ORDER BY added_at, id`,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var devices []core.Device
+	for rows.Next() {
+		d, err := scanDevice(rows)
+		if err != nil {
+			return nil, err
+		}
+		devices = append(devices, d)
+	}
+	return devices, rows.Err()
+}
+
+// RemoveDevice deletes a device. It returns ErrNotFound if no such device
+// existed.
+func (s *Store) RemoveDevice(id core.DeviceID) error {
+	res, err := s.db.Exec(`DELETE FROM devices WHERE id = ?`, string(id))
+	if err != nil {
+		return err
+	}
+	return requireAffected(res)
+}
+
+// scanner is satisfied by both *sql.Row and *sql.Rows.
+type scanner interface {
+	Scan(dest ...any) error
+}
+
+func scanDevice(sc scanner) (core.Device, error) {
+	var (
+		id, name          string
+		trusted           int
+		lastSeen, addedAt int64
+	)
+	if err := sc.Scan(&id, &name, &trusted, &lastSeen, &addedAt); err != nil {
+		return core.Device{}, err
+	}
+	return core.Device{
+		ID:       core.DeviceID(id),
+		Name:     name,
+		Trusted:  trusted != 0,
+		LastSeen: timeFromUnix(lastSeen),
+		AddedAt:  timeFromUnix(addedAt),
+	}, nil
+}

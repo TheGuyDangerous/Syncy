@@ -23,3 +23,9 @@ reaches its first release.
   and is shift-resistant, so a small edit only re-chunks nearby data — the
   basis for block-level delta sync. Tested for coverage, size bounds,
   determinism, streaming/byte parity and shift resistance.
+- `core` package: shared domain types (`Device`, `Folder`, `SyncDirection`)
+  used across the engine.
+- `metadata` package: SQLite-backed store (pure-Go `modernc.org/sqlite`, no
+  cgo) with a versioned migration runner and CRUD for devices and folders.
+  WAL journaling, foreign keys and a busy timeout are enabled. Tested for
+  migration idempotency, round-trips, upsert semantics and not-found paths.
