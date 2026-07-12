@@ -1,0 +1,133 @@
+name: Release (Desktop)
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  installers:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            platform: windows-latest
+            args: ''
+            rust-targets: ''
+          - name: macOS (universal)
+            platform: macos-latest
+            args: '--target universal-apple-darwin'
+            rust-targets: 'aarch64-apple-darwin,x86_64-apple-darwin'
+          - name: Linux
+            platform: ubuntu-22.04
+            args: ''
+            rust-targets: ''
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust-targets }}
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: engine/go.mod
+          cache-dependency-path: engine/go.sum
+
+      - name: Cache cargo
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri -> target
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Install frontend dependencies
+        working-directory: desktop
+        run: npm ci
+
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          projectPath: desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Syncy ${{ github.ref_name }}'
+          prerelease: true
+          args: ${{ matrix.args }}
+
+  bundle:
+    name: Carry mobile artifacts and write notes
+    needs: installers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Assemble the unified release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          desktop_ver="$(jq -r .version desktop/src-tauri/tauri.conf.json)"
+
+          apk_release=""
+          for r in $(gh release list --limit 40 --json tagName,createdAt \
+                      --jq 'sort_by(.createdAt)|reverse|.[].tagName'); do
+            [ "$r" = "$TAG" ] && continue
+            if gh release view "$r" --json assets --jq '.assets[].name' \
+                 | grep -qi '\.apk$'; then
+              apk_release="$r"; break
+            fi
+          done
+
+          mobile_ver=""
+          if [ -n "$apk_release" ]; then
+            mkdir -p carried
+            gh release download "$apk_release" --dir carried --pattern '*.apk'
+            gh release upload "$TAG" carried/*.apk --clobber
+            mobile_ver="$(ls carried/*.apk | head -1 \
+              | sed -E 's#.*/syncy-mobile-([0-9][0-9.]*)-.*#\1#')"
+          fi
+
+          {
+            echo "Syncy pre-release **$TAG** — work in progress."
+            echo
+            echo "| Component | Version | This release |"
+            echo "|---|---|---|"
+            echo "| Desktop — Windows, macOS, Linux | $desktop_ver | rebuilt |"
+            if [ -n "$mobile_ver" ]; then
+              echo "| Android app | $mobile_ver | unchanged (carried from \`$apk_release\`) |"
+            else
+              echo "| Android app | — | published from the \`flutter\` branch |"
+            fi
+            echo
+            if [ -n "$mobile_ver" ]; then
+              echo "Only the desktop apps changed in this release. The Android APKs are the same binaries as \`$apk_release\`."
+            fi
+            echo
+            echo "**Desktop:** \`.exe\`/\`.msi\` (Windows), \`.dmg\` (macOS), \`.AppImage\`/\`.deb\`/\`.rpm\` (Linux)."
+            echo "**Android:** per-architecture \`.apk\` (arm64-v8a, armeabi-v7a, x86_64)."
+          } > notes.md
+
+          gh release edit "$TAG" --notes-file notes.md
