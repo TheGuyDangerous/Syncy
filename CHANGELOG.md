@@ -142,3 +142,13 @@ reaches its first release.
 - Release pipeline now builds **native installers** with Tauri for Windows
   (NSIS/MSI), macOS (`.dmg`) and Linux (`.deb`/`.AppImage`) and attaches them to
   the GitHub pre-release, replacing the earlier raw engine archives.
+- Release builds now set up Go and produce a universal macOS engine sidecar
+  (`aarch64` + `x86_64` via `lipo`), so tagged installer builds no longer fail
+  on the sidecar step.
+- **Unified releases:** every pre-release now carries both the desktop
+  installers and the Android APKs. Each side is versioned independently and
+  built only when it changes — the other side's artifacts are carried over from
+  the previous release, so a desktop release never rebuilds the mobile app and
+  vice versa. See `RELEASING.md`.
+- CI gained a desktop job that builds the engine sidecar, compiles the frontend,
+  and type-checks the Tauri shell on every push and pull request.
