@@ -89,6 +89,10 @@ reaches its first release.
   detection and version history, then records the new baseline. A two-round
   integration test verifies baselines persist and concurrent edits produce a
   conflict copy — completing the sync engine (M4).
+- `api` package: a loopback HTTP + JSON control API with bearer-token auth,
+  exposing status, folder management (list / add / remove), devices, conflicts
+  and per-file version history — the surface the desktop and mobile clients
+  drive. Includes `Engine.Conflicts` and `Engine.FolderVersions`.
 - Release pipeline now builds **native installers** with Tauri for Windows
   (NSIS/MSI), macOS (`.dmg`) and Linux (`.deb`/`.AppImage`) and attaches them to
   the GitHub pre-release, replacing the earlier raw engine archives.
