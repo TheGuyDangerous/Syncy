@@ -1,0 +1,20 @@
+# Normalize line endings: LF in the repository for all text files.
+* text=auto eol=lf
+
+# Windows-native scripts must stay CRLF.
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+
+# Treat these as binary (never diff or normalize).
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.icns binary
+*.pdf  binary
+*.jks       binary
+*.keystore  binary
+*.woff  binary
+*.woff2 binary

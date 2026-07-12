@@ -1,0 +1,72 @@
+# ---- Private / local working notes (never publish) ----
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+NOTES.local.md
+scratch/
+*.local
+
+# ---- OS ----
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ---- Editors / IDEs ----
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ---- Go (engine/) ----
+/engine/bin/
+/engine/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+coverage.html
+go.work
+go.work.sum
+
+# ---- Rust / Tauri (desktop/) ----
+/desktop/**/target/
+/desktop/src-tauri/target/
+/desktop/node_modules/
+/desktop/dist/
+/desktop/.vite/
+
+# ---- Node ----
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# ---- Flutter / Dart (flutter branch) ----
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+*.iml
+.gradle/
+local.properties
+key.properties
+*.jks
+*.keystore
+
+# ---- Runtime / data ----
+*.sqlite
+*.sqlite3
+*.db
+*.db-shm
+*.db-wal
+/data/
+*.log

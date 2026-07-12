@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Lightweight repository hygiene — always runs, even before code exists.
+  hygiene:
+    name: Repository hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify required project files exist
+        run: |
+          set -e
+          for f in README.md LICENSE ARCHITECTURE.md CONTRIBUTING.md \
+                   SECURITY.md CODE_OF_CONDUCT.md ROADMAP.md CHANGELOG.md; do
+            if [ ! -f "$f" ]; then
+              echo "::error::Missing required file: $f"
+              exit 1
+            fi
+          done
+          echo "All required project files are present."
+
+  # Engine build/test — runs on every OS, but no-ops until engine/go.mod exists.
+  engine:
+    name: Engine (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect Go module
+        id: detect
+        shell: bash
+        run: |
+          if [ -f engine/go.mod ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "engine/go.mod not present yet — skipping Go build/test."
+          fi
+
+      - name: Set up Go
+        if: steps.detect.outputs.exists == 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: engine/go.mod
+          cache-dependency-path: engine/go.sum
+
+      - name: Verify formatting
+        if: steps.detect.outputs.exists == 'true'
+        shell: bash
+        run: |
+          cd engine
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "::error::These files are not gofmt-formatted:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Vet
+        if: steps.detect.outputs.exists == 'true'
+        run: cd engine && go vet ./...
+
+      - name: Build
+        if: steps.detect.outputs.exists == 'true'
+        run: cd engine && go build ./...
+
+      - name: Test
+        if: steps.detect.outputs.exists == 'true'
+        run: cd engine && go test -race -count=1 ./...

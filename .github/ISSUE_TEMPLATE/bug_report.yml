@@ -1,0 +1,59 @@
+name: Bug report
+description: Report a problem with Syncy
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please fill in as much
+        detail as you can so we can reproduce and fix the issue.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear and concise description of the bug.
+      placeholder: When I sync a folder between Windows and Linux, ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal, ordered steps that trigger the bug.
+      placeholder: |
+        1. Add a folder ...
+        2. Pair device ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Syncy version / commit
+    validations:
+      required: false
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system(s) involved
+      multiple: true
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Android
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Paste any relevant log output. This will be rendered as code.
+      render: shell
