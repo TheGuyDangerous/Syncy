@@ -37,6 +37,8 @@ go.work.sum
 # ---- Rust / Tauri (desktop/) ----
 /desktop/**/target/
 /desktop/src-tauri/target/
+/desktop/src-tauri/binaries/
+/desktop/src-tauri/gen/schemas/
 /desktop/node_modules/
 /desktop/dist/
 /desktop/.vite/
