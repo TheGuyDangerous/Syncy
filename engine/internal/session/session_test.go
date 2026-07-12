@@ -86,7 +86,7 @@ func syncDirs(t *testing.T, srcDir, dstDir string, opts ...Option) Stats {
 		if err != nil {
 			return
 		}
-		_ = Serve(ctx, conn, Folder{ID: "f", Dir: srcDir, Index: srcIdx})
+		_ = Serve(ctx, conn, SingleFolder(Folder{ID: "f", Dir: srcDir, Index: srcIdx}))
 	}()
 
 	conn, err := transport.Dial(ctx, client, ln.Addr().String(), nil)
@@ -168,6 +168,51 @@ func TestPullReusesLocalBlocks(t *testing.T) {
 	if stats.BlocksFetched == 0 {
 		t.Error("expected to fetch the changed tail blocks")
 	}
+}
+
+func TestServeMultipleFolders(t *testing.T) {
+	srcA, srcB := t.TempDir(), t.TempDir()
+	writeFile(t, srcA, "a.txt", []byte("content of folder A"))
+	writeFile(t, srcB, "b.txt", []byte("content of folder B"))
+
+	server, _ := identity.Generate()
+	client, _ := identity.Generate()
+	ln, err := transport.Listen(server, "127.0.0.1:0", nil)
+	if err != nil {
+		t.Fatalf("Listen: %v", err)
+	}
+	defer ln.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	source := Folders(map[string]Folder{
+		"fa": {ID: "fa", Dir: srcA, Index: scanDir(t, srcA)},
+		"fb": {ID: "fb", Dir: srcB, Index: scanDir(t, srcB)},
+	})
+	go func() {
+		conn, err := ln.Accept(ctx)
+		if err != nil {
+			return
+		}
+		_ = Serve(ctx, conn, source)
+	}()
+
+	conn, err := transport.Dial(ctx, client, ln.Addr().String(), nil)
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer conn.Close()
+
+	dstA, dstB := t.TempDir(), t.TempDir()
+	if _, err := Pull(ctx, conn, "fa", dstA, scanDir(t, dstA)); err != nil {
+		t.Fatalf("Pull fa: %v", err)
+	}
+	if _, err := Pull(ctx, conn, "fb", dstB, scanDir(t, dstB)); err != nil {
+		t.Fatalf("Pull fb: %v", err)
+	}
+	assertSameFile(t, srcA, dstA, "a.txt")
+	assertSameFile(t, srcB, dstB, "b.txt")
 }
 
 func TestPullArchivesOverwrittenFile(t *testing.T) {
