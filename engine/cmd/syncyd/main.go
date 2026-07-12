@@ -1,9 +1,4 @@
 // Command syncyd is the Syncy synchronization daemon.
-//
-// It embeds the sync engine and, in later milestones, exposes a local control
-// API over loopback for the desktop and mobile clients to drive. For now it is
-// a thin entry point that reports build information; the engine, discovery and
-// control API are wired up in subsequent milestones.
 package main
 
 import (
@@ -27,12 +22,8 @@ func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))
-
 	logger.Info("syncyd starting",
 		"version", buildinfo.Version,
 		"commit", buildinfo.Commit,
 	)
-	logger.Info("engine is not wired up yet; this is an early development build")
-	// Later milestones start the engine, device discovery and the local
-	// control API here, then block until a shutdown signal is received.
 }

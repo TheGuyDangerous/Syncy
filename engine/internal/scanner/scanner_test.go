@@ -10,7 +10,6 @@ import (
 	"github.com/TheGuyDangerous/Syncy/engine/internal/hashing"
 )
 
-// smallChunker yields many blocks for modest inputs so block logic is exercised.
 func smallChunker(t *testing.T) *chunker.Chunker {
 	t.Helper()
 	c, err := chunker.New(chunker.Config{Min: 1 * chunker.KiB, Avg: 4 * chunker.KiB, Max: 16 * chunker.KiB})
@@ -20,7 +19,6 @@ func smallChunker(t *testing.T) *chunker.Chunker {
 	return c
 }
 
-// deterministicBytes returns n reproducible bytes.
 func deterministicBytes(n int, seed uint64) []byte {
 	out := make([]byte, n)
 	x := seed
@@ -86,7 +84,6 @@ func TestScanBuildsIndex(t *testing.T) {
 		if fi.Hash != hashing.OfBytes(data) {
 			t.Errorf("%q whole-file hash mismatch", rel)
 		}
-		// Blocks must reconstruct the file exactly.
 		var offset int64
 		for _, b := range fi.Blocks {
 			if b.Offset != offset {

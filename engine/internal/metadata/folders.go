@@ -8,8 +8,6 @@ import (
 	"github.com/TheGuyDangerous/Syncy/engine/internal/core"
 )
 
-// PutFolder inserts or updates a shared folder by ID. The added_at timestamp is
-// set on first insert and preserved on subsequent updates.
 func (s *Store) PutFolder(f core.Folder) error {
 	if f.ID == "" {
 		return errors.New("metadata: folder ID must not be empty")
@@ -36,7 +34,6 @@ func (s *Store) PutFolder(f core.Folder) error {
 	return err
 }
 
-// GetFolder returns the folder with the given ID, or ErrNotFound.
 func (s *Store) GetFolder(id string) (core.Folder, error) {
 	row := s.db.QueryRow(
 		`SELECT id, label, path, direction, paused, added_at FROM folders WHERE id = ?`,
@@ -49,7 +46,6 @@ func (s *Store) GetFolder(id string) (core.Folder, error) {
 	return f, err
 }
 
-// ListFolders returns all shared folders, ordered by when they were added.
 func (s *Store) ListFolders() ([]core.Folder, error) {
 	rows, err := s.db.Query(
 		`SELECT id, label, path, direction, paused, added_at FROM folders ORDER BY added_at, id`,
@@ -70,8 +66,6 @@ func (s *Store) ListFolders() ([]core.Folder, error) {
 	return folders, rows.Err()
 }
 
-// RemoveFolder deletes a folder. It returns ErrNotFound if no such folder
-// existed.
 func (s *Store) RemoveFolder(id string) error {
 	res, err := s.db.Exec(`DELETE FROM folders WHERE id = ?`, id)
 	if err != nil {
@@ -99,8 +93,6 @@ func scanFolder(sc scanner) (core.Folder, error) {
 	}, nil
 }
 
-// requireAffected converts a delete/update result into ErrNotFound when nothing
-// was changed.
 func requireAffected(res sql.Result) error {
 	n, err := res.RowsAffected()
 	if err != nil {

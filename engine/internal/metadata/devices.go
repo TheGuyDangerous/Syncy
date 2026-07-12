@@ -7,8 +7,6 @@ import (
 	"github.com/TheGuyDangerous/Syncy/engine/internal/core"
 )
 
-// PutDevice inserts or updates a device by ID. The added_at timestamp is set on
-// first insert and preserved on subsequent updates.
 func (s *Store) PutDevice(d core.Device) error {
 	if d.ID == "" {
 		return errors.New("metadata: device ID must not be empty")
@@ -25,7 +23,6 @@ func (s *Store) PutDevice(d core.Device) error {
 	return err
 }
 
-// GetDevice returns the device with the given ID, or ErrNotFound.
 func (s *Store) GetDevice(id core.DeviceID) (core.Device, error) {
 	row := s.db.QueryRow(
 		`SELECT id, name, trusted, last_seen, added_at FROM devices WHERE id = ?`,
@@ -38,7 +35,6 @@ func (s *Store) GetDevice(id core.DeviceID) (core.Device, error) {
 	return d, err
 }
 
-// ListDevices returns all known devices, ordered by when they were added.
 func (s *Store) ListDevices() ([]core.Device, error) {
 	rows, err := s.db.Query(
 		`SELECT id, name, trusted, last_seen, added_at FROM devices ORDER BY added_at, id`,
@@ -59,8 +55,6 @@ func (s *Store) ListDevices() ([]core.Device, error) {
 	return devices, rows.Err()
 }
 
-// RemoveDevice deletes a device. It returns ErrNotFound if no such device
-// existed.
 func (s *Store) RemoveDevice(id core.DeviceID) error {
 	res, err := s.db.Exec(`DELETE FROM devices WHERE id = ?`, string(id))
 	if err != nil {
@@ -69,7 +63,6 @@ func (s *Store) RemoveDevice(id core.DeviceID) error {
 	return requireAffected(res)
 }
 
-// scanner is satisfied by both *sql.Row and *sql.Rows.
 type scanner interface {
 	Scan(dest ...any) error
 }
