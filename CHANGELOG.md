@@ -53,6 +53,11 @@ reaches its first release.
   device identity's mutual-TLS configs. Connections expose the peer's device ID
   and multiplexed streams. Tested with a loopback handshake, peer-ID
   verification, bidirectional data exchange and peer rejection.
+- `protocol` package: the DeltaSync Protocol (DSP) wire format — length-prefixed
+  framing with a strict maximum frame size, the message types (Hello,
+  FolderSummary, IndexUpdate, BlockRequest, BlockData, Ack, Ping/Pong, Error),
+  and raw block-data encoding. Tested for round-trips and rejection of
+  oversized, truncated and malformed frames.
 - Release pipeline now builds **native installers** with Tauri for Windows
   (NSIS/MSI), macOS (`.dmg`) and Linux (`.deb`/`.AppImage`) and attaches them to
   the GitHub pre-release, replacing the earlier raw engine archives.
