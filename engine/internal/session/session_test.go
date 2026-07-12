@@ -12,6 +12,7 @@ import (
 	"github.com/TheGuyDangerous/Syncy/engine/internal/identity"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/scanner"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/transport"
+	"github.com/TheGuyDangerous/Syncy/engine/internal/versioning"
 )
 
 func deterministicBytes(n int, seed uint64) []byte {
@@ -56,7 +57,7 @@ func scanDir(t *testing.T, dir string) *scanner.Index {
 	return idx
 }
 
-func syncDirs(t *testing.T, srcDir, dstDir string) Stats {
+func syncDirs(t *testing.T, srcDir, dstDir string, opts ...Option) Stats {
 	t.Helper()
 	srcIdx := scanDir(t, srcDir)
 	dstIdx := scanDir(t, dstDir)
@@ -93,7 +94,7 @@ func syncDirs(t *testing.T, srcDir, dstDir string) Stats {
 	}
 	t.Cleanup(func() { _ = conn.Close() })
 
-	stats, err := Pull(ctx, conn, "f", dstDir, dstIdx)
+	stats, err := Pull(ctx, conn, "f", dstDir, dstIdx, opts...)
 	if err != nil {
 		t.Fatalf("Pull: %v", err)
 	}
@@ -166,6 +167,37 @@ func TestPullReusesLocalBlocks(t *testing.T) {
 	if stats.BlocksFetched == 0 {
 		t.Error("expected to fetch the changed tail blocks")
 	}
+}
+
+func TestPullArchivesOverwrittenFile(t *testing.T) {
+	src, dst := t.TempDir(), t.TempDir()
+	writeFile(t, src, "doc.txt", []byte("brand new content"))
+	writeFile(t, dst, "doc.txt", []byte("the old content"))
+
+	store := versioning.New(filepath.Join(dst, ".syncy-versions"), 0)
+	syncDirs(t, src, dst, WithVersioning(store))
+
+	assertSameFile(t, src, dst, "doc.txt")
+
+	versions, err := store.Versions("doc.txt")
+	if err != nil {
+		t.Fatalf("Versions: %v", err)
+	}
+	if len(versions) != 1 {
+		t.Fatalf("expected 1 archived version, got %d", len(versions))
+	}
+	if got := readFileAt(t, versions[0].Path); got != "the old content" {
+		t.Errorf("archived content = %q, want %q", got, "the old content")
+	}
+}
+
+func readFileAt(t *testing.T, path string) string {
+	t.Helper()
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile %s: %v", path, err)
+	}
+	return string(b)
 }
 
 func TestPullSkipsUpToDateFiles(t *testing.T) {
