@@ -8,7 +8,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"sync"
 
+	"github.com/TheGuyDangerous/Syncy/engine/internal/ai"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/core"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/syncengine"
 )
@@ -17,10 +19,17 @@ type Server struct {
 	engine *syncengine.Engine
 	token  string
 	mux    *http.ServeMux
+
+	aiPath string
+	aiMu   sync.Mutex
+	aiCfg  ai.Config
 }
 
-func New(engine *syncengine.Engine, token string) *Server {
-	s := &Server{engine: engine, token: token, mux: http.NewServeMux()}
+func New(engine *syncengine.Engine, token, aiConfigPath string) *Server {
+	s := &Server{engine: engine, token: token, mux: http.NewServeMux(), aiPath: aiConfigPath}
+	if cfg, err := loadAIConfig(aiConfigPath); err == nil {
+		s.aiCfg = cfg
+	}
 	s.routes()
 	return s
 }
@@ -41,6 +50,11 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /folders/{id}/versions", s.handleVersions)
 	s.mux.HandleFunc("GET /devices", s.handleListDevices)
 	s.mux.HandleFunc("GET /conflicts", s.handleConflicts)
+	s.mux.HandleFunc("GET /ai", s.handleGetAI)
+	s.mux.HandleFunc("PUT /ai", s.handleSaveAI)
+	s.mux.HandleFunc("POST /ai/test", s.handleTestAI)
+	s.mux.HandleFunc("POST /ai/explain-conflict", s.handleExplainConflict)
+	s.mux.HandleFunc("POST /ai/analyze-logs", s.handleAnalyzeLogs)
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {

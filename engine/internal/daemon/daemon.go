@@ -111,7 +111,7 @@ func (d *Daemon) Run(ctx context.Context) error {
 
 	httpSrv := &http.Server{
 		Addr:    d.cfg.APIAddr,
-		Handler: api.New(d.engine, d.token),
+		Handler: api.New(d.engine, d.token, filepath.Join(d.cfg.DataDir, "ai.json")),
 	}
 	go func() { _ = httpSrv.ListenAndServe() }()
 	defer func() {

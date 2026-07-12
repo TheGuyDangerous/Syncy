@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -25,7 +26,7 @@ func newTestServer(t *testing.T) *Server {
 		t.Fatalf("OpenMemory: %v", err)
 	}
 	t.Cleanup(func() { _ = store.Close() })
-	return New(syncengine.New(id, store), testToken)
+	return New(syncengine.New(id, store), testToken, filepath.Join(t.TempDir(), "ai.json"))
 }
 
 func do(t *testing.T, s *Server, method, path, body, token string) *httptest.ResponseRecorder {
