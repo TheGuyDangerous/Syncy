@@ -8,7 +8,6 @@ import (
 	"testing"
 )
 
-// Known SHA-256 vectors from FIPS 180-4 / RFC test data.
 const (
 	emptyHex = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 	abcHex   = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
@@ -164,7 +163,6 @@ func TestShortLength(t *testing.T) {
 func TestHasherMatchesOfBytes(t *testing.T) {
 	data := []byte("stream me in pieces")
 	h := NewHasher()
-	// Write in several chunks to exercise incremental hashing.
 	for _, part := range [][]byte{data[:4], data[4:10], data[10:]} {
 		if _, err := h.Write(part); err != nil {
 			t.Fatalf("Write: %v", err)

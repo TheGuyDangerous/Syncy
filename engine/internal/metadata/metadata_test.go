@@ -108,7 +108,6 @@ func TestPutDeviceUpsertPreservesAddedAt(t *testing.T) {
 	if err := s.PutDevice(original); err != nil {
 		t.Fatalf("PutDevice: %v", err)
 	}
-	// Update with a different name and a later added_at that must be ignored.
 	updated := core.Device{ID: "d", Name: "new", Trusted: true, AddedAt: time.Unix(1_800_000_000, 0).UTC()}
 	if err := s.PutDevice(updated); err != nil {
 		t.Fatalf("PutDevice update: %v", err)
@@ -184,7 +183,6 @@ func TestPutDeviceEmptyID(t *testing.T) {
 
 func TestFolderRoundTripAndDefaults(t *testing.T) {
 	s := newTestStore(t)
-	// Direction left empty should default to SendReceive.
 	in := core.Folder{
 		ID:      "photos",
 		Label:   "Photos",

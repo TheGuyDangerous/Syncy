@@ -7,8 +7,6 @@ import (
 	"github.com/TheGuyDangerous/Syncy/engine/internal/hashing"
 )
 
-// pseudoRandom returns n deterministic bytes from a splitmix64 stream so tests
-// are reproducible without depending on math/rand internals.
 func pseudoRandom(n int, seed uint64) []byte {
 	out := make([]byte, n)
 	x := seed
@@ -25,7 +23,6 @@ func pseudoRandom(n int, seed uint64) []byte {
 
 func testChunker(t *testing.T) *Chunker {
 	t.Helper()
-	// Small sizes so modest inputs still yield many chunks.
 	c, err := New(Config{Min: 2 * KiB, Avg: 8 * KiB, Max: 64 * KiB})
 	if err != nil {
 		t.Fatalf("New: %v", err)
@@ -137,8 +134,6 @@ func TestStreamingMatchesSplitBytes(t *testing.T) {
 		t.Fatalf("SplitBytes: %v", err)
 	}
 
-	// A reader that returns tiny reads, exercising the fill loop's handling of
-	// partial reads.
 	var viaStream []Chunk
 	if err := c.Split(&drip{data: data, max: 7}, func(ch Chunk) error {
 		viaStream = append(viaStream, ch)
@@ -157,7 +152,6 @@ func TestStreamingMatchesSplitBytes(t *testing.T) {
 	}
 }
 
-// drip is an io.Reader that returns at most max bytes per Read.
 type drip struct {
 	data []byte
 	pos  int
@@ -173,9 +167,6 @@ func (d *drip) Read(p []byte) (int, error) {
 	return n, nil
 }
 
-// TestShiftResistance is the defining property of content-defined chunking:
-// prepending bytes should leave most chunk boundaries (and hashes) unchanged,
-// unlike fixed-size chunking which would shift every subsequent block.
 func TestShiftResistance(t *testing.T) {
 	c := testChunker(t)
 	data := pseudoRandom(1*MiB, 5)
@@ -239,10 +230,8 @@ func TestSmallInputSingleChunk(t *testing.T) {
 }
 
 func TestForcedMaxBoundary(t *testing.T) {
-	// All-zero data never triggers a natural boundary quickly, so chunks should
-	// be forced at Max.
 	c := testChunker(t)
-	data := make([]byte, 5*c.cfg.Max) // all zeros
+	data := make([]byte, 5*c.cfg.Max)
 	chunks, err := c.SplitBytes(data)
 	if err != nil {
 		t.Fatalf("SplitBytes: %v", err)

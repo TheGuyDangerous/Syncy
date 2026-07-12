@@ -1,10 +1,4 @@
-// Package scanner walks a folder and produces a content-addressed [Index] of
-// its files: each file's size, modification time, mode, content-defined blocks
-// and whole-file hash. The index is the input the sync engine reconciles
-// against a peer's index to decide what to transfer.
-//
-// Paths in the index are always relative to the folder root and use forward
-// slashes, so an index means the same thing on every operating system.
+// Package scanner walks a folder into a content-addressed index of its files.
 package scanner
 
 import (
@@ -19,41 +13,30 @@ import (
 	"github.com/TheGuyDangerous/Syncy/engine/internal/hashing"
 )
 
-// FileInfo describes a single regular file within a scanned folder.
 type FileInfo struct {
-	Path    string          // relative, slash-separated path from the folder root
-	Size    int64           // size in bytes
-	ModTime time.Time       // last modification time (UTC)
-	Mode    fs.FileMode     // permission bits
-	Hash    hashing.Hash    // SHA-256 of the whole file
-	Blocks  []chunker.Chunk // content-defined blocks, in order
+	Path    string
+	Size    int64
+	ModTime time.Time
+	Mode    fs.FileMode
+	Hash    hashing.Hash
+	Blocks  []chunker.Chunk
 }
 
-// Index is a snapshot of a folder's files keyed by relative path.
 type Index struct {
-	// Files maps each relative path to its info. Directories and non-regular
-	// files (symlinks, devices, sockets) are not included.
 	Files map[string]FileInfo
 }
 
-// Scanner builds an [Index] from a folder using a configured chunker.
 type Scanner struct {
 	chunker *chunker.Chunker
-	// Skip, if set, is called for each entry; returning true omits the entry
-	// (and, for a directory, everything beneath it) from the scan.
-	skip func(relPath string, d fs.DirEntry) bool
+	skip    func(relPath string, d fs.DirEntry) bool
 }
 
-// Option configures a Scanner.
 type Option func(*Scanner)
 
-// WithSkip sets a predicate used to ignore entries during a scan.
 func WithSkip(skip func(relPath string, d fs.DirEntry) bool) Option {
 	return func(s *Scanner) { s.skip = skip }
 }
 
-// New returns a Scanner. If ch is nil, a chunker with the default config is
-// used.
 func New(ch *chunker.Chunker, opts ...Option) (*Scanner, error) {
 	if ch == nil {
 		var err error
@@ -68,7 +51,6 @@ func New(ch *chunker.Chunker, opts ...Option) (*Scanner, error) {
 	return s, nil
 }
 
-// Scan walks root and returns an Index of its regular files.
 func (s *Scanner) Scan(root string) (*Index, error) {
 	info, err := os.Stat(root)
 	if err != nil {
@@ -88,7 +70,7 @@ func (s *Scanner) Scan(root string) (*Index, error) {
 			return err
 		}
 		if rel == "." {
-			return nil // the root itself
+			return nil
 		}
 		if s.skip != nil && s.skip(rel, d) {
 			if d.IsDir() {
@@ -96,7 +78,6 @@ func (s *Scanner) Scan(root string) (*Index, error) {
 			}
 			return nil
 		}
-		// Only regular files are indexed; skip directories, symlinks, etc.
 		if !d.Type().IsRegular() {
 			return nil
 		}
@@ -125,7 +106,6 @@ func (s *Scanner) scanFile(absPath, rel string) (FileInfo, error) {
 		return FileInfo{}, err
 	}
 
-	// Hash the whole file in the same pass used to chunk it.
 	hasher := hashing.NewHasher()
 	tee := io.TeeReader(f, hasher)
 
@@ -147,7 +127,6 @@ func (s *Scanner) scanFile(absPath, rel string) (FileInfo, error) {
 	}, nil
 }
 
-// relPath returns the slash-separated path of target relative to root.
 func relPath(root, target string) (string, error) {
 	rel, err := filepath.Rel(root, target)
 	if err != nil {

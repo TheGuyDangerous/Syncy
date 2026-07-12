@@ -7,7 +7,6 @@ import (
 	"github.com/TheGuyDangerous/Syncy/engine/internal/hashing"
 )
 
-// fi builds a FileInfo from a path and content (only the fields Diff uses).
 func fi(path string, content []byte) FileInfo {
 	return FileInfo{
 		Path: path,
@@ -24,7 +23,6 @@ func index(files ...FileInfo) *Index {
 	return &Index{Files: m}
 }
 
-// kindByPath collapses a change list into a path -> kind map for easy asserts.
 func kindByPath(changes []Change) map[string]ChangeKind {
 	out := make(map[string]ChangeKind, len(changes))
 	for _, c := range changes {

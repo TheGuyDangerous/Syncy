@@ -6,21 +6,15 @@ import (
 	"github.com/TheGuyDangerous/Syncy/engine/internal/hashing"
 )
 
-// ChangeKind classifies one difference between two indexes.
 type ChangeKind int
 
 const (
-	// Added means the file exists in the new index but not the old one.
 	Added ChangeKind = iota
-	// Modified means the file exists in both but its content changed.
 	Modified
-	// Deleted means the file existed in the old index but not the new one.
 	Deleted
-	// Renamed means identical content moved from OldPath to Path.
 	Renamed
 )
 
-// String returns the lowercase name of the change kind.
 func (k ChangeKind) String() string {
 	switch k {
 	case Added:
@@ -36,24 +30,15 @@ func (k ChangeKind) String() string {
 	}
 }
 
-// Change describes a single difference that transforms an old index into a new
-// one.
 type Change struct {
-	Kind ChangeKind
-	// Path is the current path: the new path for Added/Modified/Renamed, and
-	// the removed path for Deleted.
-	Path string
-	// OldPath is only set for Renamed: the file's previous path.
+	Kind    ChangeKind
+	Path    string
 	OldPath string
-	// File is the relevant FileInfo: the new info for Added/Modified/Renamed,
-	// and the old info for Deleted.
-	File FileInfo
+	File    FileInfo
 }
 
-// Diff computes the set of changes that turn oldIdx into newIdx. Renames and
-// moves are detected by matching deleted and added files with identical
-// non-empty content, so a moved file transfers no data. The result is sorted by
-// path for deterministic output.
+// Diff returns the changes that turn oldIdx into newIdx, pairing identical
+// non-empty content across deletes and adds as renames.
 func Diff(oldIdx, newIdx *Index) []Change {
 	var changes []Change
 	var addedPaths, deletedPaths []string
@@ -74,13 +59,9 @@ func Diff(oldIdx, newIdx *Index) []Change {
 		}
 	}
 
-	// Sort so both rename matching and final output are deterministic.
 	sort.Strings(addedPaths)
 	sort.Strings(deletedPaths)
 
-	// Index the additions by content hash for rename matching. Empty files are
-	// excluded: many unrelated empty files share one hash and would pair
-	// spuriously.
 	addedByHash := make(map[hashing.Hash][]string)
 	for _, p := range addedPaths {
 		f := newIdx.Files[p]
