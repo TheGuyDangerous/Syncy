@@ -16,6 +16,8 @@ versioned independently of the desktop engine and lives on the `flutter` branch.
 - Settings screen with connection details and a disconnect action.
 - Material 3 dark theme sharing the desktop's status colour vocabulary and a
   monospace treatment for device identifiers.
+- App launcher icon (legacy and adaptive) — the linked-peers mark shared with
+  the desktop app, generated with `flutter_launcher_icons`.
 - Continuous integration: analyze, test, and per-architecture debug APK builds
   (`--split-per-abi`) uploaded as artifacts on every push and pull request.
 - Release workflow: tagging a `flutter` commit builds per-architecture release
