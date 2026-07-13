@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 
 export interface Status {
   device_id: string;
@@ -111,7 +112,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
   let res: Response;
   try {
-    res = await fetch(info.base_url + path, {
+    res = await tauriFetch(info.base_url + path, {
       ...init,
       headers: {
         Authorization: `Bearer ${info.token}`,
@@ -129,17 +130,21 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (text ? JSON.parse(text) : undefined) as T;
 }
 
+async function requestList<T>(path: string): Promise<T[]> {
+  return (await request<T[] | null>(path)) ?? [];
+}
+
 export const api = {
   status: () => request<Status>("/status"),
-  folders: () => request<Folder[]>("/folders"),
+  folders: () => requestList<Folder>("/folders"),
   addFolder: (folder: NewFolder) =>
     request<void>("/folders", { method: "POST", body: JSON.stringify(folder) }),
   removeFolder: (id: string) =>
     request<void>(`/folders/${encodeURIComponent(id)}`, { method: "DELETE" }),
-  devices: () => request<Device[]>("/devices"),
-  conflicts: () => request<Conflict[]>("/conflicts"),
+  devices: () => requestList<Device>("/devices"),
+  conflicts: () => requestList<Conflict>("/conflicts"),
   versions: (folderId: string, relPath: string) =>
-    request<FileVersion[]>(
+    requestList<FileVersion>(
       `/folders/${encodeURIComponent(folderId)}/versions?path=${encodeURIComponent(relPath)}`,
     ),
   aiConfig: () => request<AiConfigView>("/ai"),
