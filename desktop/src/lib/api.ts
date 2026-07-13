@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 
 export interface Status {
   device_id: string;
@@ -111,7 +112,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
   let res: Response;
   try {
-    res = await fetch(info.base_url + path, {
+    res = await tauriFetch(info.base_url + path, {
       ...init,
       headers: {
         Authorization: `Bearer ${info.token}`,
