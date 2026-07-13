@@ -159,9 +159,136 @@ textarea {
   user-select: text;
 }
 
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.titlebar {
+  height: 38px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding-left: 14px;
+}
+
+.titlebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.titlebar-mark {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--accent), #7aa2ff);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.titlebar-name {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.titlebar-controls {
+  display: flex;
+  align-self: stretch;
+}
+
+.win-btn {
+  width: 44px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: default;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+
+.win-btn:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.win-btn--close:hover {
+  background: #e5484d;
+  color: #fff;
+}
+
+.resize-handle {
+  position: fixed;
+  z-index: 200;
+}
+
+.resize-handle--n {
+  top: 0;
+  left: 8px;
+  right: 140px;
+  height: 4px;
+  cursor: ns-resize;
+}
+.resize-handle--s {
+  bottom: 0;
+  left: 8px;
+  right: 8px;
+  height: 4px;
+  cursor: ns-resize;
+}
+.resize-handle--e {
+  top: 8px;
+  bottom: 8px;
+  right: 0;
+  width: 4px;
+  cursor: ew-resize;
+}
+.resize-handle--w {
+  top: 8px;
+  bottom: 8px;
+  left: 0;
+  width: 4px;
+  cursor: ew-resize;
+}
+.resize-handle--nw {
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  cursor: nwse-resize;
+}
+.resize-handle--se {
+  bottom: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  cursor: nwse-resize;
+}
+.resize-handle--sw {
+  bottom: 0;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  cursor: nesw-resize;
+}
+
 .shell {
   display: flex;
-  height: 100vh;
+  flex: 1;
+  min-height: 0;
 }
 
 .sidebar {
