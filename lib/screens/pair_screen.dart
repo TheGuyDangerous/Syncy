@@ -31,6 +31,7 @@ class _PairScreenState extends State<PairScreen> {
   }
 
   Future<void> _connect() async {
+    if (_connecting) return;
     final address = _addressController.text.trim();
     final token = _tokenController.text.trim();
     if (address.isEmpty || token.isEmpty) {
@@ -80,7 +81,7 @@ class _PairScreenState extends State<PairScreen> {
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                    'Syncy Mobile is a companion. Point it at the Syncy app on your computer to watch and manage sync from your phone.',
+                    'Syncy on your phone is a companion. Point it at the Syncy app on your computer to watch and manage sync from your phone.',
                     textAlign: TextAlign.center,
                     style: SyncyText.muted,
                   ),
@@ -91,6 +92,7 @@ class _PairScreenState extends State<PairScreen> {
                     controller: _addressController,
                     keyboardType: TextInputType.url,
                     autocorrect: false,
+                    textInputAction: TextInputAction.next,
                     style: SyncyText.monoStrong,
                     decoration: const InputDecoration(hintText: '192.168.1.20:22062'),
                   ),
@@ -102,6 +104,8 @@ class _PairScreenState extends State<PairScreen> {
                     obscureText: _obscureToken,
                     autocorrect: false,
                     enableSuggestions: false,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _connect(),
                     style: SyncyText.monoStrong,
                     decoration: InputDecoration(
                       hintText: 'Paste the token from Syncy',

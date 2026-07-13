@@ -21,7 +21,10 @@ class SettingsScreen extends StatelessWidget {
       bottom: false,
       child: Column(
         children: [
-          const PageHeader(title: 'Settings'),
+          const PageHeader(
+            title: 'Settings',
+            subtitle: 'Your pairing and this app',
+          ),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
@@ -50,7 +53,7 @@ class SettingsScreen extends StatelessWidget {
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Syncy Mobile', style: SyncyText.cardTitle),
+                              Text('Syncy', style: SyncyText.cardTitle),
                               SizedBox(height: 2),
                               Text(
                                 'Version $_appVersion ($_buildNumber) · Companion preview',
