@@ -85,6 +85,20 @@ var migrations = [][]string{
 			PRIMARY KEY (folder_id, path)
 		)`,
 	},
+	{
+		`ALTER TABLE devices ADD COLUMN endpoints TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE devices ADD COLUMN pending_outgoing INTEGER NOT NULL DEFAULT 0`,
+		`CREATE TABLE friend_requests (
+			from_id    TEXT PRIMARY KEY,
+			name       TEXT    NOT NULL DEFAULT '',
+			endpoints  TEXT    NOT NULL DEFAULT '',
+			created_at INTEGER NOT NULL DEFAULT 0
+		)`,
+		`CREATE TABLE settings (
+			key   TEXT PRIMARY KEY,
+			value TEXT NOT NULL
+		)`,
+	},
 }
 
 func (s *Store) migrate() error {

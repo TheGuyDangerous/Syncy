@@ -3,6 +3,7 @@ package metadata
 import (
 	"errors"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -69,11 +70,13 @@ func TestReopenIsIdempotent(t *testing.T) {
 func TestDeviceRoundTrip(t *testing.T) {
 	s := newTestStore(t)
 	want := core.Device{
-		ID:       "device-abc",
-		Name:     "Workstation",
-		Trusted:  true,
-		LastSeen: time.Unix(1_700_000_500, 0).UTC(),
-		AddedAt:  time.Unix(1_700_000_000, 0).UTC(),
+		ID:              "device-abc",
+		Name:            "Workstation",
+		Trusted:         true,
+		PendingOutgoing: true,
+		Endpoints:       []string{"192.168.1.4:22067", "[2001:db8::1]:22067"},
+		LastSeen:        time.Unix(1_700_000_500, 0).UTC(),
+		AddedAt:         time.Unix(1_700_000_000, 0).UTC(),
 	}
 	if err := s.PutDevice(want); err != nil {
 		t.Fatalf("PutDevice: %v", err)
@@ -82,7 +85,7 @@ func TestDeviceRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetDevice: %v", err)
 	}
-	if got != want {
+	if !reflect.DeepEqual(got, want) {
 		t.Errorf("round-trip mismatch:\n got  %+v\n want %+v", got, want)
 	}
 }
