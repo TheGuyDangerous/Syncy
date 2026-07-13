@@ -45,11 +45,13 @@ fn show_main(app: &tauri::AppHandle) {
 
 fn spawn_engine(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let dir = engine_dir(app)?;
+    kill_stale_engine(&dir);
     let (mut rx, child) = app
         .shell()
         .sidecar("syncyd")?
         .args(["--data-dir", &dir.to_string_lossy(), "--api", API_ADDR])
         .spawn()?;
+    let _ = std::fs::write(dir.join("syncyd.pid"), child.pid().to_string());
     tauri::async_runtime::spawn(async move {
         let _child = child;
         while let Some(event) = rx.recv().await {
@@ -59,6 +61,29 @@ fn spawn_engine(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>
         }
     });
     Ok(())
+}
+
+fn kill_stale_engine(dir: &std::path::Path) {
+    let Ok(raw) = std::fs::read_to_string(dir.join("syncyd.pid")) else {
+        return;
+    };
+    let Ok(pid) = raw.trim().parse::<u32>() else {
+        return;
+    };
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        let _ = std::process::Command::new("taskkill")
+            .args(["/F", "/PID", &pid.to_string()])
+            .creation_flags(0x0800_0000)
+            .output();
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = std::process::Command::new("kill")
+            .args(["-9", &pid.to_string()])
+            .output();
+    }
 }
 
 fn build_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
@@ -93,7 +118,14 @@ fn build_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> 
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+    #[cfg(desktop)]
+    {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            show_main(app);
+        }));
+    }
+    builder
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_autostart::init(

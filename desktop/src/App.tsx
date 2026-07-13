@@ -99,6 +99,12 @@ export default function App() {
     return () => window.clearInterval(t);
   }, [shell.reload]);
 
+  useEffect(() => {
+    if (shell.data || shell.loading) return;
+    const t = window.setTimeout(shell.reload, 1500);
+    return () => window.clearTimeout(t);
+  }, [shell.data, shell.loading, shell.error, shell.reload]);
+
   let tone: Tone;
   let label: string;
   if (shell.data) {
