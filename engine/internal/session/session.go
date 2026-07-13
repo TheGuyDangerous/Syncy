@@ -148,6 +148,36 @@ func serveBlocks(s transport.Stream, dir string, req protocol.BlockRequest) {
 	}
 }
 
+// RequestFolderList asks the peer which folders it shares and returns their
+// ids and labels. Only trusted peers answer; anyone else replies with an error.
+func RequestFolderList(ctx context.Context, conn *transport.Conn) ([]protocol.SharedFolder, error) {
+	s, err := conn.OpenStream(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer s.Close()
+	if err := protocol.WriteFrame(s, protocol.TypeFolderListRequest, nil); err != nil {
+		return nil, err
+	}
+	if dl, ok := ctx.Deadline(); ok {
+		if rd, ok := s.(interface{ SetReadDeadline(time.Time) error }); ok {
+			_ = rd.SetReadDeadline(dl)
+		}
+	}
+	frame, err := protocol.ReadFrame(s)
+	if err != nil {
+		return nil, err
+	}
+	if frame.Type != protocol.TypeFolderListResponse {
+		return nil, fmt.Errorf("session: unexpected %s while reading folder list", frame.Type)
+	}
+	var resp protocol.FolderListResponse
+	if err := protocol.Decode(frame, &resp); err != nil {
+		return nil, err
+	}
+	return resp.Folders, nil
+}
+
 func Pull(ctx context.Context, conn *transport.Conn, folderID, destDir string, local *scanner.Index, opts ...Option) (Stats, error) {
 	var cfg config
 	for _, opt := range opts {

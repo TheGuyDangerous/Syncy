@@ -55,6 +55,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("DELETE /devices/{id}", s.handleRemoveDevice)
 	s.mux.HandleFunc("GET /invite", s.handleInvite)
 	s.mux.HandleFunc("POST /friends", s.handleAddFriend)
+	s.mux.HandleFunc("GET /friends/{id}/folders", s.handleFriendFolders)
 	s.mux.HandleFunc("GET /friend-requests", s.handleListFriendRequests)
 	s.mux.HandleFunc("POST /friend-requests/{id}/accept", s.handleAcceptFriendRequest)
 	s.mux.HandleFunc("POST /friend-requests/{id}/reject", s.handleRejectFriendRequest)

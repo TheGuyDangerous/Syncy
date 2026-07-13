@@ -10,6 +10,7 @@ import (
 
 	"github.com/TheGuyDangerous/Syncy/engine/internal/core"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/metadata"
+	"github.com/TheGuyDangerous/Syncy/engine/internal/syncengine"
 )
 
 const friendNetworkTimeout = 30 * time.Second
@@ -41,6 +42,24 @@ func (s *Server) handleAddFriend(w http.ResponseWriter, r *http.Request) {
 		Device    core.Device `json:"device"`
 		Delivered bool        `json:"delivered"`
 	}{dev, delivered})
+}
+
+func (s *Server) handleFriendFolders(w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(r.Context(), friendNetworkTimeout)
+	defer cancel()
+	folders, err := s.engine.FriendFolders(ctx, core.DeviceID(r.PathValue("id")))
+	switch {
+	case errors.Is(err, metadata.ErrNotFound):
+		writeError(w, http.StatusNotFound, "no such device")
+	case errors.Is(err, syncengine.ErrNotFriend):
+		writeError(w, http.StatusBadRequest, "that device is not a friend yet")
+	case errors.Is(err, syncengine.ErrUnreachable):
+		writeError(w, http.StatusBadGateway, "friend is offline or unreachable right now")
+	case err != nil:
+		writeError(w, http.StatusInternalServerError, err.Error())
+	default:
+		writeJSON(w, http.StatusOK, folders)
+	}
 }
 
 func (s *Server) handleListFriendRequests(w http.ResponseWriter, _ *http.Request) {

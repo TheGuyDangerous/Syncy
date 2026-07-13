@@ -225,6 +225,16 @@ func (d *Daemon) serveTrustedStream(s transport.Stream, peer core.DeviceID, sour
 			Endpoints: d.engine.LocalEndpoints(),
 		})
 	case protocol.TypeFriendResponse:
+	case protocol.TypeFolderListRequest:
+		folders, err := d.engine.Folders()
+		if err != nil {
+			return
+		}
+		shared := make([]protocol.SharedFolder, 0, len(folders))
+		for _, f := range folders {
+			shared = append(shared, protocol.SharedFolder{ID: f.ID, Label: f.Label})
+		}
+		_ = protocol.WriteMessage(s, protocol.TypeFolderListResponse, protocol.FolderListResponse{Folders: shared})
 	default:
 		session.ServeFrame(s, frame, source)
 	}

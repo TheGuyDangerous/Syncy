@@ -27,6 +27,8 @@ const (
 	TypeError
 	TypeFriendRequest
 	TypeFriendResponse
+	TypeFolderListRequest
+	TypeFolderListResponse
 )
 
 func (t MessageType) String() string {
@@ -53,6 +55,10 @@ func (t MessageType) String() string {
 		return "friend-request"
 	case TypeFriendResponse:
 		return "friend-response"
+	case TypeFolderListRequest:
+		return "folder-list-request"
+	case TypeFolderListResponse:
+		return "folder-list-response"
 	default:
 		return fmt.Sprintf("unknown(%d)", uint8(t))
 	}
@@ -183,6 +189,15 @@ type FriendResponse struct {
 	Accepted  bool     `json:"accepted"`
 	Name      string   `json:"name,omitempty"`
 	Endpoints []string `json:"endpoints,omitempty"`
+}
+
+type SharedFolder struct {
+	ID    string `json:"id"`
+	Label string `json:"label,omitempty"`
+}
+
+type FolderListResponse struct {
+	Folders []SharedFolder `json:"folders"`
 }
 
 func WriteBlockData(w io.Writer, hash hashing.Hash, data []byte) error {
