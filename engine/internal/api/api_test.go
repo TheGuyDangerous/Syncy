@@ -141,6 +141,56 @@ func TestDevicesAndConflicts(t *testing.T) {
 	}
 }
 
+func TestDeviceLifecycle(t *testing.T) {
+	s := newTestServer(t)
+
+	rec := do(t, s, "POST", "/devices", `{"id":"peer-1","name":"Laptop"}`, testToken)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("POST /devices code = %d, want 201 (%s)", rec.Code, rec.Body)
+	}
+
+	rec = do(t, s, "GET", "/devices", "", testToken)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /devices code = %d", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "peer-1") {
+		t.Errorf("device list missing new device: %s", rec.Body)
+	}
+	if !strings.Contains(rec.Body.String(), `"trusted":true`) {
+		t.Errorf("paired device should be trusted: %s", rec.Body)
+	}
+
+	rec = do(t, s, "DELETE", "/devices/peer-1", "", testToken)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("DELETE code = %d, want 204", rec.Code)
+	}
+
+	rec = do(t, s, "DELETE", "/devices/peer-1", "", testToken)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("deleting a missing device code = %d, want 404", rec.Code)
+	}
+}
+
+func TestAddDeviceRejectsBadInput(t *testing.T) {
+	s := newTestServer(t)
+	if rec := do(t, s, "POST", "/devices", `{"id":"  "}`, testToken); rec.Code != http.StatusBadRequest {
+		t.Errorf("empty id code = %d, want 400", rec.Code)
+	}
+	if rec := do(t, s, "POST", "/devices", `not json`, testToken); rec.Code != http.StatusBadRequest {
+		t.Errorf("invalid json code = %d, want 400", rec.Code)
+	}
+
+	rec := do(t, s, "GET", "/status", "", testToken)
+	var status statusResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &status); err != nil {
+		t.Fatalf("decode status: %v", err)
+	}
+	own := `{"id":"` + status.DeviceID + `"}`
+	if rec := do(t, s, "POST", "/devices", own, testToken); rec.Code != http.StatusBadRequest {
+		t.Errorf("own id code = %d, want 400", rec.Code)
+	}
+}
+
 func TestGenerateTokenIsRandom(t *testing.T) {
 	a, err := GenerateToken()
 	if err != nil {

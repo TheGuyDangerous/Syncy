@@ -8,7 +8,9 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/TheGuyDangerous/Syncy/engine/internal/ai"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/core"
@@ -49,6 +51,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("DELETE /folders/{id}", s.handleRemoveFolder)
 	s.mux.HandleFunc("GET /folders/{id}/versions", s.handleVersions)
 	s.mux.HandleFunc("GET /devices", s.handleListDevices)
+	s.mux.HandleFunc("POST /devices", s.handleAddDevice)
+	s.mux.HandleFunc("DELETE /devices/{id}", s.handleRemoveDevice)
 	s.mux.HandleFunc("GET /conflicts", s.handleConflicts)
 	s.mux.HandleFunc("GET /ai", s.handleGetAI)
 	s.mux.HandleFunc("PUT /ai", s.handleSaveAI)
@@ -153,6 +157,40 @@ func (s *Server) handleListDevices(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, devices)
+}
+
+func (s *Server) handleAddDevice(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		return
+	}
+	id := strings.TrimSpace(body.ID)
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "device id is required")
+		return
+	}
+	if id == string(s.engine.ID()) {
+		writeError(w, http.StatusBadRequest, "that's this device's own id")
+		return
+	}
+	dev := core.Device{ID: core.DeviceID(id), Name: strings.TrimSpace(body.Name), Trusted: true, AddedAt: time.Now()}
+	if err := s.engine.AddDevice(dev); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, dev)
+}
+
+func (s *Server) handleRemoveDevice(w http.ResponseWriter, r *http.Request) {
+	if err := s.engine.RemoveDevice(core.DeviceID(r.PathValue("id"))); err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *Server) handleConflicts(w http.ResponseWriter, _ *http.Request) {
