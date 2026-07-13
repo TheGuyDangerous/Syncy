@@ -56,6 +56,31 @@ func TestRequiresToken(t *testing.T) {
 	}
 }
 
+func TestCORSPreflightNeedsNoToken(t *testing.T) {
+	s := newTestServer(t)
+	rec := do(t, s, "OPTIONS", "/status", "", "")
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("OPTIONS code = %d, want 204", rec.Code)
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "*" {
+		t.Errorf("Allow-Origin = %q, want *", got)
+	}
+	if rec.Header().Get("Access-Control-Allow-Headers") == "" {
+		t.Error("Allow-Headers should be set so the browser may send Authorization")
+	}
+}
+
+func TestCORSHeaderOnResponses(t *testing.T) {
+	s := newTestServer(t)
+	rec := do(t, s, "GET", "/status", "", testToken)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("GET /status code = %d", rec.Code)
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "*" {
+		t.Errorf("Allow-Origin = %q, want *", got)
+	}
+}
+
 func TestStatus(t *testing.T) {
 	s := newTestServer(t)
 	rec := do(t, s, "GET", "/status", "", testToken)
