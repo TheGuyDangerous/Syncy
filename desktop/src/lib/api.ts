@@ -22,8 +22,36 @@ export interface Device {
   id: string;
   name: string;
   trusted: boolean;
+  pending_outgoing?: boolean;
+  endpoints?: string[];
   last_seen: string;
   added_at: string;
+}
+
+export interface Invite {
+  code: string;
+}
+
+export interface FriendRequest {
+  from_id: string;
+  name: string;
+  endpoints?: string[];
+  created_at: string;
+}
+
+export interface AddFriendResult {
+  device: Device;
+  delivered: boolean;
+}
+
+export interface AcceptFriendResult {
+  device: Device;
+  notified: boolean;
+}
+
+export interface DiscoverySettings {
+  local: boolean;
+  internet: boolean;
 }
 
 export interface Conflict {
@@ -151,6 +179,22 @@ export const api = {
     request<Device>("/devices", { method: "POST", body: JSON.stringify(d) }),
   unpairDevice: (id: string) =>
     request<void>(`/devices/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  invite: () => request<Invite>("/invite"),
+  addFriend: (code: string) =>
+    request<AddFriendResult>("/friends", { method: "POST", body: JSON.stringify({ code }) }),
+  friendRequests: () => requestList<FriendRequest>("/friend-requests"),
+  acceptFriendRequest: (id: string) =>
+    request<AcceptFriendResult>(`/friend-requests/${encodeURIComponent(id)}/accept`, {
+      method: "POST",
+    }),
+  rejectFriendRequest: (id: string) =>
+    request<void>(`/friend-requests/${encodeURIComponent(id)}/reject`, { method: "POST" }),
+  discovery: () => request<DiscoverySettings>("/settings/discovery"),
+  saveDiscovery: (settings: DiscoverySettings) =>
+    request<DiscoverySettings>("/settings/discovery", {
+      method: "PUT",
+      body: JSON.stringify(settings),
+    }),
   conflicts: () => requestList<Conflict>("/conflicts"),
   versions: (folderId: string, relPath: string) =>
     requestList<FileVersion>(
