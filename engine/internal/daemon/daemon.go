@@ -326,7 +326,7 @@ func (d *Daemon) remoteDialLoop(ctx context.Context) {
 		case <-ticker.C:
 		}
 		settings, err := d.engine.DiscoverySettings()
-		if err != nil || !settings.Internet {
+		if err != nil {
 			continue
 		}
 		devices, err := d.store.ListDevices()
@@ -335,6 +335,9 @@ func (d *Daemon) remoteDialLoop(ctx context.Context) {
 		}
 		for _, dev := range devices {
 			if dev.ID == d.id.ID() || len(dev.Endpoints) == 0 {
+				continue
+			}
+			if dev.Trusted && !settings.Internet {
 				continue
 			}
 			if !dev.Trusted && !dev.PendingOutgoing {
