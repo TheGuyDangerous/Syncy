@@ -2,7 +2,13 @@ import { useEffect, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { getThemePref, setThemePref, type ThemePref } from "../lib/theme";
-import { api, errorMessage, type AiKind, type AiConfigInput } from "../lib/api";
+import {
+  api,
+  errorMessage,
+  type AiKind,
+  type AiConfigInput,
+  type DiscoverySettings,
+} from "../lib/api";
 import { Screen } from "../components/Screen";
 import { Select } from "../components/Select";
 import { BrandMark } from "../components/BrandMark";
@@ -81,6 +87,9 @@ export default function Settings() {
   const [aiBusy, setAiBusy] = useState<null | "save" | "test">(null);
   const [aiMsg, setAiMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
+  const [discovery, setDiscovery] = useState<DiscoverySettings | null>(null);
+  const [discoveryError, setDiscoveryError] = useState<string | null>(null);
+
   useEffect(() => {
     invoke<string>("app_version")
       .then(setVersion)
@@ -98,7 +107,26 @@ export default function Settings() {
         setAiHasKey(cfg.has_api_key);
       })
       .catch(() => {});
+    api
+      .discovery()
+      .then(setDiscovery)
+      .catch((e: unknown) => setDiscoveryError(errorMessage(e)));
   }, []);
+
+  function toggleDiscovery(key: keyof DiscoverySettings) {
+    if (!discovery) return;
+    const prev = discovery;
+    const next = { ...discovery, [key]: !discovery[key] };
+    setDiscovery(next);
+    setDiscoveryError(null);
+    api
+      .saveDiscovery(next)
+      .then(setDiscovery)
+      .catch((e: unknown) => {
+        setDiscovery(prev);
+        setDiscoveryError(errorMessage(e));
+      });
+  }
 
   function chooseTheme(pref: ThemePref) {
     setThemePref(pref);
@@ -239,11 +267,54 @@ export default function Settings() {
 
           {section === "network" ? (
             <>
-              <SectionHeader title="Network" desc="How Syncy connects to your peers." />
-              <NoteCard
-                name="Automatic"
-                hint="The engine picks listen addresses and relays for now. Manual control lands here later."
-              />
+              <SectionHeader title="Network" desc="How Syncy finds and reaches your friends." />
+              <div className="card">
+                <div className="setting-row">
+                  <div>
+                    <p className="setting-name">Local network</p>
+                    <p className="setting-hint">Find devices on the same Wi-Fi automatically.</p>
+                  </div>
+                  <label className="switch">
+                    <input
+                      type="checkbox"
+                      checked={discovery?.local ?? true}
+                      disabled={!discovery}
+                      onChange={() => toggleDiscovery("local")}
+                      aria-label="Local network discovery"
+                    />
+                    <span className="switch-track" />
+                  </label>
+                </div>
+                <div className="setting-row">
+                  <div>
+                    <p className="setting-name">
+                      Internet <span className="pill">Alpha</span>
+                    </p>
+                    <p className="setting-hint">
+                      Reach friends on other networks. Works when your router supports UPnP or
+                      you've forwarded the port; both sides behind carrier NAT isn't supported
+                      yet.
+                    </p>
+                  </div>
+                  <label className="switch">
+                    <input
+                      type="checkbox"
+                      checked={discovery?.internet ?? false}
+                      disabled={!discovery}
+                      onChange={() => toggleDiscovery("internet")}
+                      aria-label="Internet discovery"
+                    />
+                    <span className="switch-track" />
+                  </label>
+                </div>
+                {discoveryError ? (
+                  <div className="setting-row">
+                    <p className="form-error" role="alert">
+                      {discoveryError}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
             </>
           ) : null}
 
