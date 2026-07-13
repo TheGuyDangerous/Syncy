@@ -4,6 +4,8 @@ import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { getThemePref, setThemePref, type ThemePref } from "../lib/theme";
 import { api, errorMessage, type AiKind, type AiConfigInput } from "../lib/api";
 import { Screen } from "../components/Screen";
+import { Select } from "../components/Select";
+import { BrandMark } from "../components/BrandMark";
 
 const SECTIONS = [
   { id: "general", label: "General" },
@@ -280,20 +282,15 @@ export default function Settings() {
 
                 <form className="form-card form-card--divider" onSubmit={saveAi}>
                   <div className="form-grid">
-                    <label className="field">
+                    <div className="field">
                       <span className="field-label">Provider</span>
-                      <select
-                        className="input select"
+                      <Select
                         value={aiKind}
-                        onChange={(e) => setAiKind(e.target.value as AiKind)}
-                      >
-                        {AI_PROVIDERS.map((p) => (
-                          <option key={p.value} value={p.value}>
-                            {p.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                        onChange={(v) => setAiKind(v as AiKind)}
+                        options={AI_PROVIDERS.map((p) => ({ value: p.value, label: p.label }))}
+                        ariaLabel="Provider"
+                      />
+                    </div>
                     <label className="field">
                       <span className="field-label">Model</span>
                       <input
@@ -363,7 +360,7 @@ export default function Settings() {
             <>
               <SectionHeader title="About" desc="Version and project info." />
               <div className="card about-card">
-                <div className="brand-mark brand-mark--lg">S</div>
+                <BrandMark size={44} />
                 <p className="about-name">Syncy</p>
                 <p className="mono about-version">{version ? `v${version}` : "…"}</p>
                 <p className="about-tag">Local-first, peer-to-peer folder sync.</p>
