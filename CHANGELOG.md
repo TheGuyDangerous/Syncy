@@ -185,3 +185,9 @@ reaches its first release.
   password key field that shows "saved" without echoing the key, and a Test
   Connection button. The Conflicts screen gained a per-file **Explain** action
   that asks the assistant why a file conflicts and how to resolve it.
+- Custom window frame: the desktop app draws its own titlebar (brand, drag
+  region, minimize / maximize / close, resizable edges) instead of the native OS
+  chrome, so the window is themed with the app in both light and dark. Close
+  still hides to the tray.
+- New app icon — a linked-peers mark on a dark ground — shared across the desktop
+  installers and the Android app.
