@@ -5,6 +5,7 @@ import { initTheme } from "./lib/theme";
 import { shortId } from "./lib/format";
 import { Icon, type IconName } from "./components/Icon";
 import { StatusDot, type Tone } from "./components/StatusDot";
+import { TitleBar } from "./components/TitleBar";
 import Dashboard from "./screens/Dashboard";
 import Devices from "./screens/Devices";
 import Folders from "./screens/Folders";
@@ -125,7 +126,9 @@ export default function App() {
   }
 
   return (
-    <div className="shell">
+    <div className="app">
+      <TitleBar />
+      <div className="shell">
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-mark">S</div>
@@ -160,6 +163,7 @@ export default function App() {
         </div>
       </aside>
       <main className="main">{screenFor(view)}</main>
+      </div>
     </div>
   );
 }
