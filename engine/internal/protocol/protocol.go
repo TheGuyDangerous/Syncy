@@ -25,6 +25,8 @@ const (
 	TypePing
 	TypePong
 	TypeError
+	TypeFriendRequest
+	TypeFriendResponse
 )
 
 func (t MessageType) String() string {
@@ -47,6 +49,10 @@ func (t MessageType) String() string {
 		return "pong"
 	case TypeError:
 		return "error"
+	case TypeFriendRequest:
+		return "friend-request"
+	case TypeFriendResponse:
+		return "friend-response"
 	default:
 		return fmt.Sprintf("unknown(%d)", uint8(t))
 	}
@@ -165,6 +171,18 @@ type Pong struct {
 type ErrorMsg struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
+}
+
+type FriendRequest struct {
+	FromID    string   `json:"from_id"`
+	FromName  string   `json:"from_name,omitempty"`
+	Endpoints []string `json:"endpoints,omitempty"`
+}
+
+type FriendResponse struct {
+	Accepted  bool     `json:"accepted"`
+	Name      string   `json:"name,omitempty"`
+	Endpoints []string `json:"endpoints,omitempty"`
 }
 
 func WriteBlockData(w io.Writer, hash hashing.Hash, data []byte) error {
