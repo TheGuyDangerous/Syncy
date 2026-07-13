@@ -94,6 +94,11 @@ func serveStream(s transport.Stream, source FolderSource) {
 	if err != nil {
 		return
 	}
+	ServeFrame(s, frame, source)
+}
+
+// ServeFrame answers a single already-read request frame on its stream.
+func ServeFrame(s transport.Stream, frame protocol.Frame, source FolderSource) {
 	switch frame.Type {
 	case protocol.TypeFolderSummary:
 		var req protocol.FolderSummary

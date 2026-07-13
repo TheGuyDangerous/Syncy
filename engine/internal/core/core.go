@@ -6,11 +6,25 @@ import "time"
 type DeviceID string
 
 type Device struct {
-	ID       DeviceID  `json:"id"`
-	Name     string    `json:"name"`
-	Trusted  bool      `json:"trusted"`
-	LastSeen time.Time `json:"last_seen"`
-	AddedAt  time.Time `json:"added_at"`
+	ID              DeviceID  `json:"id"`
+	Name            string    `json:"name"`
+	Trusted         bool      `json:"trusted"`
+	PendingOutgoing bool      `json:"pending_outgoing,omitempty"`
+	Endpoints       []string  `json:"endpoints,omitempty"`
+	LastSeen        time.Time `json:"last_seen"`
+	AddedAt         time.Time `json:"added_at"`
+}
+
+type FriendRequest struct {
+	FromID    DeviceID  `json:"from_id"`
+	Name      string    `json:"name"`
+	Endpoints []string  `json:"endpoints,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type DiscoverySettings struct {
+	Local    bool `json:"local"`
+	Internet bool `json:"internet"`
 }
 
 type SyncDirection string

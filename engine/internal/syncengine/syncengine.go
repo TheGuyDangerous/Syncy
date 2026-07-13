@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/TheGuyDangerous/Syncy/engine/internal/core"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/hashing"
@@ -26,6 +27,9 @@ const (
 type Engine struct {
 	id    *identity.Identity
 	store *metadata.Store
+
+	epMu sync.RWMutex
+	eps  func() []string
 }
 
 func New(id *identity.Identity, store *metadata.Store) *Engine {

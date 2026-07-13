@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/http"
@@ -23,9 +24,18 @@ import (
 	"github.com/TheGuyDangerous/Syncy/engine/internal/discovery"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/identity"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/metadata"
+	"github.com/TheGuyDangerous/Syncy/engine/internal/nat"
+	"github.com/TheGuyDangerous/Syncy/engine/internal/protocol"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/session"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/syncengine"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/transport"
+)
+
+const (
+	remoteDialInterval   = 30 * time.Second
+	natCheckInterval     = time.Minute
+	natRefreshInterval   = 40 * time.Minute
+	untrustedIdleTimeout = 15 * time.Second
 )
 
 type Config struct {
@@ -43,6 +53,10 @@ type Daemon struct {
 
 	mu      sync.Mutex
 	syncing map[string]bool
+
+	epMu     sync.Mutex
+	lanEps   []string
+	external string
 }
 
 func New(cfg Config) (*Daemon, error) {
@@ -94,6 +108,8 @@ func (d *Daemon) DataDir() string            { return d.cfg.DataDir }
 func (d *Daemon) Close() error               { return d.store.Close() }
 
 func (d *Daemon) Run(ctx context.Context) error {
+	d.engine.SetEndpointSource(d.endpoints)
+
 	apiLn, err := net.Listen("tcp", d.cfg.APIAddr)
 	if err != nil {
 		return fmt.Errorf("daemon: control API cannot bind %s: %w", d.cfg.APIAddr, err)
@@ -119,28 +135,41 @@ func (d *Daemon) Run(ctx context.Context) error {
 
 	go d.acceptLoop(ctx, ln)
 
+	settings, err := d.engine.DiscoverySettings()
+	if err != nil {
+		settings = core.DiscoverySettings{Local: true}
+	}
 	if port, err := listenPort(ln); err == nil {
-		if announcer, err := discovery.Announce(string(d.id.ID()), port); err == nil {
-			defer announcer.Close()
+		d.setLANEndpoints(port)
+		go d.natLoop(ctx, port)
+		if settings.Local {
+			if announcer, err := discovery.Announce(string(d.id.ID()), port); err == nil {
+				defer announcer.Close()
+			}
+			if peers, err := discovery.Browse(ctx); err == nil {
+				go d.dialLoop(ctx, peers)
+			}
 		}
 	}
-	if peers, err := discovery.Browse(ctx); err == nil {
-		go d.dialLoop(ctx, peers)
-	}
+	go d.remoteDialLoop(ctx)
 
 	<-ctx.Done()
 	return nil
 }
 
+// authorize admits any peer that proved a device identity during the TLS
+// handshake. Trust is enforced per-connection in serveConn: untrusted peers
+// may only exchange friend requests and never reach the sync path.
 func (d *Daemon) authorize(peerID core.DeviceID, _ *x509.Certificate) error {
-	dev, err := d.store.GetDevice(peerID)
-	if err != nil {
-		return errors.New("daemon: unknown device")
-	}
-	if !dev.Trusted {
-		return errors.New("daemon: device not trusted")
+	if peerID == "" {
+		return errors.New("daemon: peer has no device identity")
 	}
 	return nil
+}
+
+func (d *Daemon) trusted(id core.DeviceID) bool {
+	dev, err := d.store.GetDevice(id)
+	return err == nil && dev.Trusted
 }
 
 func (d *Daemon) acceptLoop(ctx context.Context, ln *transport.Listener) {
@@ -155,11 +184,116 @@ func (d *Daemon) acceptLoop(ctx context.Context, ln *transport.Listener) {
 
 func (d *Daemon) serveConn(ctx context.Context, conn *transport.Conn) {
 	defer conn.Close()
+	if d.trusted(conn.Peer()) {
+		d.serveTrusted(ctx, conn)
+		return
+	}
+	d.serveUntrusted(ctx, conn)
+}
+
+func (d *Daemon) serveTrusted(ctx context.Context, conn *transport.Conn) {
 	snapshot, err := d.engine.FolderSnapshot()
 	if err != nil {
 		return
 	}
-	_ = session.Serve(ctx, conn, session.Folders(snapshot))
+	source := session.Folders(snapshot)
+	for {
+		s, err := conn.AcceptStream(ctx)
+		if err != nil {
+			return
+		}
+		go d.serveTrustedStream(s, conn.Peer(), source)
+	}
+}
+
+func (d *Daemon) serveTrustedStream(s transport.Stream, peer core.DeviceID, source session.FolderSource) {
+	defer s.Close()
+	frame, err := protocol.ReadFrame(s)
+	if err != nil {
+		return
+	}
+	switch frame.Type {
+	case protocol.TypeFriendRequest:
+		var req protocol.FriendRequest
+		if protocol.Decode(frame, &req) != nil || req.FromID != string(peer) {
+			return
+		}
+		d.engine.RefreshFriend(peer, req.FromName, req.Endpoints)
+		_ = protocol.WriteMessage(s, protocol.TypeFriendResponse, protocol.FriendResponse{
+			Accepted:  true,
+			Name:      d.engine.DeviceName(),
+			Endpoints: d.engine.LocalEndpoints(),
+		})
+	case protocol.TypeFriendResponse:
+	default:
+		session.ServeFrame(s, frame, source)
+	}
+}
+
+// serveUntrusted lets an identity-verified but untrusted peer open exactly one
+// stream, which must carry a friend request or a friend response to an ask we
+// made. Folder data is never served here.
+func (d *Daemon) serveUntrusted(ctx context.Context, conn *transport.Conn) {
+	s, err := conn.AcceptStream(ctx)
+	if err != nil {
+		return
+	}
+	defer s.Close()
+	setStreamDeadline(s, untrustedIdleTimeout)
+	frame, err := protocol.ReadFrame(s)
+	if err != nil {
+		return
+	}
+	peer := conn.Peer()
+	switch frame.Type {
+	case protocol.TypeFriendRequest:
+		var req protocol.FriendRequest
+		if protocol.Decode(frame, &req) != nil || req.FromID != string(peer) {
+			d.replyUntrusted(s, protocol.TypeError, protocol.ErrorMsg{
+				Code: "bad-request", Message: "friend request does not match the connection identity",
+			})
+			return
+		}
+		if err := d.engine.RecordFriendRequest(peer, req.FromName, req.Endpoints); err != nil {
+			d.replyUntrusted(s, protocol.TypeError, protocol.ErrorMsg{
+				Code: "internal", Message: "could not record the friend request",
+			})
+			return
+		}
+		slog.Info("friend request received", "from", peer, "name", req.FromName)
+		d.replyUntrusted(s, protocol.TypeAck, protocol.Ack{Marker: "pending"})
+	case protocol.TypeFriendResponse:
+		var resp protocol.FriendResponse
+		if protocol.Decode(frame, &resp) != nil {
+			return
+		}
+		if resp.Accepted && d.engine.ApplyFriendResponse(peer, resp.Name, resp.Endpoints) {
+			slog.Info("friend request accepted by peer", "device", peer)
+			d.replyUntrusted(s, protocol.TypeAck, protocol.Ack{Marker: "trusted"})
+			return
+		}
+		d.replyUntrusted(s, protocol.TypeError, protocol.ErrorMsg{
+			Code: "unexpected", Message: "no outgoing friend request for this device",
+		})
+	default:
+		d.replyUntrusted(s, protocol.TypeError, protocol.ErrorMsg{
+			Code: "untrusted", Message: "this device is not trusted; only friend requests are accepted",
+		})
+	}
+}
+
+func (d *Daemon) replyUntrusted(s transport.Stream, typ protocol.MessageType, msg any) {
+	if protocol.WriteMessage(s, typ, msg) != nil {
+		return
+	}
+	setStreamDeadline(s, untrustedIdleTimeout)
+	_, _ = io.Copy(io.Discard, s)
+}
+
+func setStreamDeadline(s transport.Stream, timeout time.Duration) {
+	if dl, ok := s.(interface{ SetReadDeadline(time.Time) error }); ok {
+		_ = dl.SetReadDeadline(time.Now().Add(timeout))
+	}
 }
 
 func (d *Daemon) dialLoop(ctx context.Context, peers <-chan discovery.Peer) {
@@ -176,26 +310,72 @@ func (d *Daemon) dialLoop(ctx context.Context, peers <-chan discovery.Peer) {
 			}
 			go func(p discovery.Peer) {
 				defer d.endSync(p.DeviceID)
-				d.syncWithPeer(ctx, p)
+				d.syncWithAddr(ctx, core.DeviceID(p.DeviceID), p.Addr)
 			}(peer)
 		}
 	}
 }
 
-func (d *Daemon) syncWithPeer(ctx context.Context, peer discovery.Peer) {
-	dev, err := d.store.GetDevice(core.DeviceID(peer.DeviceID))
-	if err != nil || !dev.Trusted {
-		return
+func (d *Daemon) remoteDialLoop(ctx context.Context) {
+	ticker := time.NewTicker(remoteDialInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+		settings, err := d.engine.DiscoverySettings()
+		if err != nil {
+			continue
+		}
+		devices, err := d.store.ListDevices()
+		if err != nil {
+			continue
+		}
+		for _, dev := range devices {
+			if dev.ID == d.id.ID() || len(dev.Endpoints) == 0 {
+				continue
+			}
+			if dev.Trusted && !settings.Internet {
+				continue
+			}
+			if !dev.Trusted && !dev.PendingOutgoing {
+				continue
+			}
+			if !d.beginSync(string(dev.ID)) {
+				continue
+			}
+			go func(dev core.Device) {
+				defer d.endSync(string(dev.ID))
+				if !dev.Trusted {
+					d.engine.SendFriendRequest(ctx, dev)
+					return
+				}
+				for _, ep := range dev.Endpoints {
+					if d.syncWithAddr(ctx, dev.ID, ep) {
+						return
+					}
+				}
+			}(dev)
+		}
 	}
-	conn, err := transport.Dial(ctx, d.id, peer.Addr, d.authorize)
+}
+
+func (d *Daemon) syncWithAddr(ctx context.Context, peer core.DeviceID, addr string) bool {
+	dev, err := d.store.GetDevice(peer)
+	if err != nil || !dev.Trusted {
+		return false
+	}
+	conn, err := transport.Dial(ctx, d.id, addr, identity.ExpectPeer(peer))
 	if err != nil {
-		return
+		return false
 	}
 	defer conn.Close()
 
 	folders, err := d.store.ListFolders()
 	if err != nil {
-		return
+		return false
 	}
 	for _, f := range folders {
 		if f.Paused {
@@ -203,6 +383,73 @@ func (d *Daemon) syncWithPeer(ctx context.Context, peer discovery.Peer) {
 		}
 		_, _ = d.engine.PullFolder(ctx, conn, f.ID)
 	}
+	return true
+}
+
+func (d *Daemon) natLoop(ctx context.Context, port int) {
+	var lastAttempt time.Time
+	for {
+		settings, err := d.engine.DiscoverySettings()
+		internet := err == nil && settings.Internet
+		switch {
+		case !internet:
+			d.setExternal("")
+			lastAttempt = time.Time{}
+		case lastAttempt.IsZero() || time.Since(lastAttempt) >= natRefreshInterval:
+			d.refreshNAT(ctx, port)
+			lastAttempt = time.Now()
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(natCheckInterval):
+		}
+	}
+}
+
+func (d *Daemon) refreshNAT(ctx context.Context, port int) {
+	mctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	ep, err := nat.ExternalEndpoint(mctx, port)
+	if err != nil {
+		slog.Warn("no router port mapping; this device is reachable from the internet only via a public IP or manual port-forward",
+			"error", err)
+		d.setExternal("")
+		return
+	}
+	slog.Info("mapped external endpoint", "endpoint", ep)
+	d.setExternal(ep)
+}
+
+func (d *Daemon) setLANEndpoints(port int) {
+	ips, err := nat.LANIPs()
+	if err != nil {
+		return
+	}
+	eps := make([]string, 0, len(ips))
+	for _, ip := range ips {
+		eps = append(eps, nat.Endpoint(ip, port))
+	}
+	d.epMu.Lock()
+	d.lanEps = eps
+	d.epMu.Unlock()
+}
+
+func (d *Daemon) setExternal(ep string) {
+	d.epMu.Lock()
+	d.external = ep
+	d.epMu.Unlock()
+}
+
+func (d *Daemon) endpoints() []string {
+	d.epMu.Lock()
+	defer d.epMu.Unlock()
+	out := make([]string, 0, len(d.lanEps)+1)
+	out = append(out, d.lanEps...)
+	if d.external != "" {
+		out = append(out, d.external)
+	}
+	return out
 }
 
 func (d *Daemon) beginSync(deviceID string) bool {

@@ -12,20 +12,23 @@ func (s *Store) PutDevice(d core.Device) error {
 		return errors.New("metadata: device ID must not be empty")
 	}
 	_, err := s.db.Exec(
-		`INSERT INTO devices (id, name, trusted, last_seen, added_at)
-		 VALUES (?, ?, ?, ?, ?)
+		`INSERT INTO devices (id, name, trusted, pending_outgoing, endpoints, last_seen, added_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(id) DO UPDATE SET
-		     name      = excluded.name,
-		     trusted   = excluded.trusted,
-		     last_seen = excluded.last_seen`,
-		string(d.ID), d.Name, boolToInt(d.Trusted), unixOrZero(d.LastSeen), unixOrZero(d.AddedAt),
+		     name             = excluded.name,
+		     trusted          = excluded.trusted,
+		     pending_outgoing = excluded.pending_outgoing,
+		     endpoints        = excluded.endpoints,
+		     last_seen        = excluded.last_seen`,
+		string(d.ID), d.Name, boolToInt(d.Trusted), boolToInt(d.PendingOutgoing),
+		listToJSON(d.Endpoints), unixOrZero(d.LastSeen), unixOrZero(d.AddedAt),
 	)
 	return err
 }
 
 func (s *Store) GetDevice(id core.DeviceID) (core.Device, error) {
 	row := s.db.QueryRow(
-		`SELECT id, name, trusted, last_seen, added_at FROM devices WHERE id = ?`,
+		`SELECT id, name, trusted, pending_outgoing, endpoints, last_seen, added_at FROM devices WHERE id = ?`,
 		string(id),
 	)
 	d, err := scanDevice(row)
@@ -37,7 +40,7 @@ func (s *Store) GetDevice(id core.DeviceID) (core.Device, error) {
 
 func (s *Store) ListDevices() ([]core.Device, error) {
 	rows, err := s.db.Query(
-		`SELECT id, name, trusted, last_seen, added_at FROM devices ORDER BY added_at, id`,
+		`SELECT id, name, trusted, pending_outgoing, endpoints, last_seen, added_at FROM devices ORDER BY added_at, id`,
 	)
 	if err != nil {
 		return nil, err
@@ -69,18 +72,20 @@ type scanner interface {
 
 func scanDevice(sc scanner) (core.Device, error) {
 	var (
-		id, name          string
-		trusted           int
-		lastSeen, addedAt int64
+		id, name, endpoints string
+		trusted, pending    int
+		lastSeen, addedAt   int64
 	)
-	if err := sc.Scan(&id, &name, &trusted, &lastSeen, &addedAt); err != nil {
+	if err := sc.Scan(&id, &name, &trusted, &pending, &endpoints, &lastSeen, &addedAt); err != nil {
 		return core.Device{}, err
 	}
 	return core.Device{
-		ID:       core.DeviceID(id),
-		Name:     name,
-		Trusted:  trusted != 0,
-		LastSeen: timeFromUnix(lastSeen),
-		AddedAt:  timeFromUnix(addedAt),
+		ID:              core.DeviceID(id),
+		Name:            name,
+		Trusted:         trusted != 0,
+		PendingOutgoing: pending != 0,
+		Endpoints:       listFromJSON(endpoints),
+		LastSeen:        timeFromUnix(lastSeen),
+		AddedAt:         timeFromUnix(addedAt),
 	}, nil
 }

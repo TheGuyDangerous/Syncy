@@ -39,11 +39,16 @@ Each logical exchange uses its own QUIC stream:
 
 - Every device owns a long‑lived **Ed25519** key pair. Its **device ID** is
   derived from the public key.
-- The QUIC/TLS handshake authenticates both peers by these identities. A
-  connection is only accepted if the remote device ID is **paired and trusted**
-  locally.
-- Pairing establishes mutual trust out of band (e.g. exchanging device IDs or
-  scanning a code) before the first connection.
+- The QUIC/TLS handshake authenticates both peers by these identities: the
+  connection fails unless the remote cryptographically proves a device ID.
+- **Trust is enforced at the application layer.** An identity‑verified but
+  *untrusted* peer may open exactly one stream carrying a `FriendRequest` (or a
+  `FriendResponse` answering a request we sent); any other message is answered
+  with an `Error` frame and no folder metadata or data is ever served to it.
+  Only devices marked trusted reach the reconciliation flow below.
+- Pairing establishes mutual trust either out of band (exchanging device IDs)
+  or in band via invite codes and the friend‑request exchange described in
+  [remote sync](../remote-sync.md).
 
 ## Message framing
 
@@ -72,6 +77,8 @@ compatibility); malformed frames terminate the stream.
 | `Ack`           | both      | Acknowledge applied updates / delivered blocks. |
 | `Ping`/`Pong`   | both      | Liveness and latency measurement. |
 | `Error`         | both      | Structured, non‑fatal error notification. |
+| `FriendRequest` | A → B     | Ask an identity‑verified peer to establish mutual trust; carries the sender's ID, name and endpoints. |
+| `FriendResponse`| B → A     | Answer a friend request; `accepted` plus the responder's name and endpoints. |
 
 ## Reconciliation flow
 

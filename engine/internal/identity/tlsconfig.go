@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"fmt"
 
 	"github.com/TheGuyDangerous/Syncy/engine/internal/core"
 )
@@ -14,6 +15,17 @@ const ALPN = "syncy/1"
 // PeerAuthenticator decides whether a connecting peer, identified by its
 // certificate-derived device ID, is allowed to proceed.
 type PeerAuthenticator func(peerID core.DeviceID, cert *x509.Certificate) error
+
+// ExpectPeer pins a connection to one device: the handshake fails unless the
+// remote proves it holds the key behind want.
+func ExpectPeer(want core.DeviceID) PeerAuthenticator {
+	return func(peerID core.DeviceID, _ *x509.Certificate) error {
+		if peerID != want {
+			return fmt.Errorf("identity: peer is %s, expected %s", peerID, want)
+		}
+		return nil
+	}
+}
 
 func (i *Identity) ServerTLSConfig(auth PeerAuthenticator) (*tls.Config, error) {
 	cert, err := i.TLSCertificate()
