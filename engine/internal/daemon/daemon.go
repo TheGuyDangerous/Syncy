@@ -7,6 +7,8 @@ import (
 	"context"
 	"crypto/x509"
 	"errors"
+	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"os"
@@ -92,9 +94,26 @@ func (d *Daemon) DataDir() string            { return d.cfg.DataDir }
 func (d *Daemon) Close() error               { return d.store.Close() }
 
 func (d *Daemon) Run(ctx context.Context) error {
+	apiLn, err := net.Listen("tcp", d.cfg.APIAddr)
+	if err != nil {
+		return fmt.Errorf("daemon: control API cannot bind %s: %w", d.cfg.APIAddr, err)
+	}
+	httpSrv := &http.Server{
+		Handler: api.New(d.engine, d.token, filepath.Join(d.cfg.DataDir, "ai.json")),
+	}
+	go func() { _ = httpSrv.Serve(apiLn) }()
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = httpSrv.Shutdown(shutdownCtx)
+	}()
+
 	ln, err := transport.Listen(d.id, d.cfg.ListenAddr, d.authorize)
 	if err != nil {
-		return err
+		slog.Warn("peer transport unavailable; syncing is paused until restart",
+			"addr", d.cfg.ListenAddr, "error", err)
+		<-ctx.Done()
+		return nil
 	}
 	defer ln.Close()
 
@@ -108,17 +127,6 @@ func (d *Daemon) Run(ctx context.Context) error {
 	if peers, err := discovery.Browse(ctx); err == nil {
 		go d.dialLoop(ctx, peers)
 	}
-
-	httpSrv := &http.Server{
-		Addr:    d.cfg.APIAddr,
-		Handler: api.New(d.engine, d.token, filepath.Join(d.cfg.DataDir, "ai.json")),
-	}
-	go func() { _ = httpSrv.ListenAndServe() }()
-	defer func() {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		_ = httpSrv.Shutdown(shutdownCtx)
-	}()
 
 	<-ctx.Done()
 	return nil

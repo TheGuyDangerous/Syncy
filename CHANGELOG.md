@@ -124,6 +124,19 @@ reaches its first release.
   SIGINT/SIGTERM; data directory, listen and API addresses are configurable.
   Completes the daemon and M5.
 
+### Fixed
+- The desktop app no longer gets stuck on "Can't reach the sync engine" when the
+  engine's peer port is already in use. The daemon now brings up its local
+  control API **first** and treats the QUIC peer listener as best-effort: a busy
+  P2P port pauses syncing until restart instead of taking the whole engine — and
+  the UI — down with it.
+- The app cleans up a stale engine left by a previous run (tracked by PID) before
+  starting a new one, and now runs **single-instance**, so relaunching focuses
+  the existing window instead of spawning a second, port-conflicting engine.
+- The dashboard retries the connection every 1.5s while the engine is still
+  starting, so the first launch settles on its own instead of stalling on
+  "Engine offline".
+
 ### Security
 - Hardened against **path traversal** (CodeQL `go/path-injection`): a new `fsafe`
   helper rejects non-local paths (absolute or `..`-escaping), and the sync
