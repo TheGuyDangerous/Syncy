@@ -67,10 +67,16 @@ class _FoldersScreenState extends State<FoldersScreen> {
       });
     } on ApiException catch (e) {
       if (!mounted) return;
+      final hadData = _folders.isNotEmpty;
       setState(() {
         _error = e.message;
         _loading = false;
       });
+      if (hadData) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      }
     }
   }
 
@@ -159,7 +165,7 @@ class _FoldersScreenState extends State<FoldersScreen> {
     for (var i = 0; i < _folders.length; i++) {
       final folder = _folders[i];
       final status = folder.paused ? SyncStatus.paused : SyncStatus.synced;
-      if (i > 0) rows.add(const Divider(height: 28, color: SyncyColors.border));
+      if (i > 0) rows.add(const Divider(height: 24, color: SyncyColors.border));
       rows.add(
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -203,7 +209,7 @@ class _FoldersScreenState extends State<FoldersScreen> {
     final rows = <Widget>[];
     for (var i = 0; i < _shareOptions.length; i++) {
       final option = _shareOptions[i];
-      if (i > 0) rows.add(const Divider(height: 22, color: SyncyColors.border));
+      if (i > 0) rows.add(const Divider(height: 24, color: SyncyColors.border));
       rows.add(_shareRow(option));
     }
     return Column(
@@ -237,35 +243,42 @@ class _FoldersScreenState extends State<FoldersScreen> {
 
   Widget _shareRow(_ShareOption option) {
     final selected = _selected.contains(option.id);
-    return Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: SyncyColors.surfaceRaised,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: SyncyColors.border),
-          ),
-          child: Icon(option.icon, color: SyncyColors.accent, size: 20),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _toggleShare(option.id, !selected),
+        borderRadius: BorderRadius.circular(12),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: SyncyColors.surfaceRaised,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: SyncyColors.border),
+              ),
+              child: Icon(option.icon, color: SyncyColors.accent, size: 20),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(option.label, style: SyncyText.cardTitle),
+                  const SizedBox(height: 2),
+                  Text(option.subtitle, style: SyncyText.muted),
+                ],
+              ),
+            ),
+            Switch(
+              value: selected,
+              onChanged: (value) => _toggleShare(option.id, value),
+            ),
+          ],
         ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(option.label, style: SyncyText.cardTitle),
-              const SizedBox(height: 2),
-              Text(option.subtitle, style: SyncyText.muted),
-            ],
-          ),
-        ),
-        Switch(
-          value: selected,
-          onChanged: (value) => _toggleShare(option.id, value),
-        ),
-      ],
+      ),
     );
   }
 }
