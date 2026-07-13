@@ -57,10 +57,16 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     } on ApiException catch (e) {
       if (!mounted) return;
+      final hadData = _status != null;
       setState(() {
         _error = e.message;
         _loading = false;
       });
+      if (hadData) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      }
     }
   }
 
@@ -213,7 +219,7 @@ class _HomeScreenState extends State<HomeScreen> {
     for (var i = 0; i < _devices.length; i++) {
       final device = _devices[i];
       final status = device.trusted ? SyncStatus.synced : SyncStatus.pending;
-      if (i > 0) rows.add(const Divider(height: 26, color: SyncyColors.border));
+      if (i > 0) rows.add(const Divider(height: 24, color: SyncyColors.border));
       rows.add(
         Row(
           children: [
