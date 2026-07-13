@@ -13,10 +13,15 @@ import (
 	"github.com/TheGuyDangerous/Syncy/engine/internal/invite"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/metadata"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/protocol"
+	"github.com/TheGuyDangerous/Syncy/engine/internal/session"
 	"github.com/TheGuyDangerous/Syncy/engine/internal/transport"
 )
 
-var ErrOwnCode = errors.New("syncengine: that is this device's own invite code")
+var (
+	ErrOwnCode     = errors.New("syncengine: that is this device's own invite code")
+	ErrNotFriend   = errors.New("syncengine: that device is not a trusted friend")
+	ErrUnreachable = errors.New("syncengine: friend is offline or unreachable")
+)
 
 const (
 	friendDialTimeout = 6 * time.Second
@@ -126,6 +131,40 @@ func (e *Engine) SendFriendRequest(ctx context.Context, dev core.Device) bool {
 
 func (e *Engine) FriendRequests() ([]core.FriendRequest, error) {
 	return e.store.ListFriendRequests()
+}
+
+// FriendFolders dials a trusted friend at its saved endpoints and returns the
+// folders it shares.
+func (e *Engine) FriendFolders(ctx context.Context, id core.DeviceID) ([]protocol.SharedFolder, error) {
+	dev, err := e.store.GetDevice(id)
+	if err != nil {
+		return nil, err
+	}
+	if !dev.Trusted {
+		return nil, ErrNotFriend
+	}
+	for _, ep := range dev.Endpoints {
+		if ctx.Err() != nil {
+			break
+		}
+		dctx, cancel := context.WithTimeout(ctx, friendDialTimeout)
+		conn, err := transport.Dial(dctx, e.id, ep, identity.ExpectPeer(id))
+		if err != nil {
+			cancel()
+			continue
+		}
+		folders, err := session.RequestFolderList(dctx, conn)
+		conn.Close()
+		cancel()
+		if err != nil {
+			continue
+		}
+		if folders == nil {
+			folders = []protocol.SharedFolder{}
+		}
+		return folders, nil
+	}
+	return nil, ErrUnreachable
 }
 
 // AcceptFriendRequest trusts the requesting device and, when reachable, tells

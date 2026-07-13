@@ -49,6 +49,28 @@ func TestInvite(t *testing.T) {
 	}
 }
 
+func TestFriendFolders(t *testing.T) {
+	s, engine := newTestServerWithEngine(t)
+
+	if rec := do(t, s, "GET", "/friends/nobody/folders", "", testToken); rec.Code != http.StatusNotFound {
+		t.Errorf("unknown device code = %d, want 404", rec.Code)
+	}
+
+	if err := engine.AddDevice(core.Device{ID: "stranger", Name: "Stranger"}); err != nil {
+		t.Fatalf("AddDevice: %v", err)
+	}
+	if rec := do(t, s, "GET", "/friends/stranger/folders", "", testToken); rec.Code != http.StatusBadRequest {
+		t.Errorf("untrusted device code = %d, want 400", rec.Code)
+	}
+
+	if err := engine.AddDevice(core.Device{ID: "friend", Name: "Friend", Trusted: true}); err != nil {
+		t.Fatalf("AddDevice: %v", err)
+	}
+	if rec := do(t, s, "GET", "/friends/friend/folders", "", testToken); rec.Code != http.StatusBadGateway {
+		t.Errorf("unreachable friend code = %d, want 502", rec.Code)
+	}
+}
+
 func TestAddFriendByCode(t *testing.T) {
 	s := newTestServer(t)
 

@@ -101,6 +101,7 @@ func TestMessageRoundTrip(t *testing.T) {
 		{TypeError, &ErrorMsg{Code: "conflict", Message: "both sides changed"}, &ErrorMsg{}},
 		{TypeFriendRequest, &FriendRequest{FromID: "abc", FromName: "laptop", Endpoints: []string{"192.168.1.4:22067", "203.0.113.9:22067"}}, &FriendRequest{}},
 		{TypeFriendResponse, &FriendResponse{Accepted: true, Name: "desktop", Endpoints: []string{"192.168.1.5:22067"}}, &FriendResponse{}},
+		{TypeFolderListResponse, &FolderListResponse{Folders: []SharedFolder{{ID: "photos", Label: "Photos"}, {ID: "docs"}}}, &FolderListResponse{}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.typ.String(), func(t *testing.T) {

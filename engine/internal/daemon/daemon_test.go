@@ -218,6 +218,93 @@ func TestFriendHandshakeAndSync(t *testing.T) {
 	}
 }
 
+func requestFolderList(t *testing.T, ctx context.Context, from *Daemon, to *Daemon, addr string) protocol.Frame {
+	t.Helper()
+	conn, err := transport.Dial(ctx, from.id, addr, identity.ExpectPeer(to.id.ID()))
+	if err != nil {
+		t.Fatalf("Dial: %v", err)
+	}
+	defer conn.Close()
+	s, err := conn.OpenStream(ctx)
+	if err != nil {
+		t.Fatalf("OpenStream: %v", err)
+	}
+	defer s.Close()
+	if err := protocol.WriteFrame(s, protocol.TypeFolderListRequest, nil); err != nil {
+		t.Fatalf("WriteFrame: %v", err)
+	}
+	frame, err := protocol.ReadFrame(s)
+	if err != nil {
+		t.Fatalf("ReadFrame: %v", err)
+	}
+	return frame
+}
+
+func TestFolderSharingWithFriend(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	t.Cleanup(cancel)
+
+	a, addrA := newPeer(t, ctx)
+	b, _ := newPeer(t, ctx)
+
+	dirA := t.TempDir()
+	content := []byte("a picture worth syncing")
+	if err := os.WriteFile(filepath.Join(dirA, "pic.txt"), content, 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+	if err := a.store.PutFolder(core.Folder{ID: "photos", Label: "Photos", Path: dirA}); err != nil {
+		t.Fatalf("PutFolder: %v", err)
+	}
+
+	if frame := requestFolderList(t, ctx, b, a, addrA); frame.Type != protocol.TypeError {
+		t.Fatalf("untrusted folder list answered with %s, want error", frame.Type)
+	}
+	if _, err := b.engine.FriendFolders(ctx, a.DeviceID()); err == nil {
+		t.Fatal("FriendFolders should fail for an unknown device")
+	}
+
+	if _, delivered, err := b.engine.AddFriendByCode(ctx, a.engine.InviteCode()); err != nil || !delivered {
+		t.Fatalf("AddFriendByCode: delivered=%v err=%v", delivered, err)
+	}
+	if _, _, err := a.engine.AcceptFriendRequest(ctx, b.DeviceID()); err != nil {
+		t.Fatalf("AcceptFriendRequest: %v", err)
+	}
+	if !a.trusted(b.DeviceID()) || !b.trusted(a.DeviceID()) {
+		t.Fatal("both sides should trust each other")
+	}
+
+	shared, err := b.engine.FriendFolders(ctx, a.DeviceID())
+	if err != nil {
+		t.Fatalf("FriendFolders: %v", err)
+	}
+	if len(shared) != 1 || shared[0].ID != "photos" || shared[0].Label != "Photos" {
+		t.Fatalf("shared folders = %+v, want [{photos Photos}]", shared)
+	}
+
+	dirB := t.TempDir()
+	if err := b.store.PutFolder(core.Folder{ID: "photos", Label: "Photos", Path: dirB}); err != nil {
+		t.Fatalf("PutFolder on B: %v", err)
+	}
+	if !b.syncWithAddr(ctx, a.DeviceID(), addrA) {
+		t.Fatal("syncWithAddr should succeed between friends")
+	}
+	got, err := os.ReadFile(filepath.Join(dirB, "pic.txt"))
+	if err != nil {
+		t.Fatalf("accepted folder did not sync: %v", err)
+	}
+	if !bytes.Equal(got, content) {
+		t.Errorf("synced content = %q, want %q", got, content)
+	}
+
+	c, _ := newPeer(t, ctx)
+	if frame := requestFolderList(t, ctx, c, a, addrA); frame.Type != protocol.TypeError {
+		t.Fatalf("stranger folder list answered with %s, want error", frame.Type)
+	}
+	if _, err := c.engine.FriendFolders(ctx, a.DeviceID()); err == nil {
+		t.Fatal("a stranger must not be able to list a device's folders")
+	}
+}
+
 func TestCrossingFriendRequestsResolve(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	t.Cleanup(cancel)

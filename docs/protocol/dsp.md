@@ -79,6 +79,8 @@ compatibility); malformed frames terminate the stream.
 | `Error`         | both      | Structured, non‑fatal error notification. |
 | `FriendRequest` | A → B     | Ask an identity‑verified peer to establish mutual trust; carries the sender's ID, name and endpoints. |
 | `FriendResponse`| B → A     | Answer a friend request; `accepted` plus the responder's name and endpoints. |
+| `FolderListRequest` | A → B | Ask a **trusted** peer which folders it shares. Empty payload. Untrusted peers are answered with `Error`. |
+| `FolderListResponse`| B → A | The peer's shared folders as `{folders: [{id, label}]}`. A friend accepts one by configuring a local folder with the same `id`; the matching ids pair the folders for sync. |
 
 ## Reconciliation flow
 
