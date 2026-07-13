@@ -125,6 +125,11 @@ reaches its first release.
   Completes the daemon and M5.
 
 ### Fixed
+- The control API now answers CORS preflight requests and sends
+  `Access-Control-Allow-Origin`, so the desktop app's web view can actually read
+  the engine's responses. Without it, a healthy engine still showed as
+  "offline" because the browser blocked every cross-origin request to the
+  loopback API. The API stays loopback-only and token-authenticated.
 - The desktop app no longer gets stuck on "Can't reach the sync engine" when the
   engine's peer port is already in use. The daemon now brings up its local
   control API **first** and treats the QUIC peer listener as best-effort: a busy
