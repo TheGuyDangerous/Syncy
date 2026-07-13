@@ -13,6 +13,7 @@ import Folders from "./screens/Folders";
 import Conflicts from "./screens/Conflicts";
 import Placeholder from "./screens/Placeholder";
 import Settings from "./screens/Settings";
+import Transfers from "./screens/Transfers";
 import Versions from "./screens/Versions";
 
 initTheme();
@@ -54,15 +55,7 @@ function screenFor(view: View) {
     case "folders":
       return <Folders />;
     case "transfers":
-      return (
-        <Placeholder
-          title="Transfers"
-          description="File activity between this device and your peers."
-          icon="transfers"
-          emptyTitle="Nothing moving right now"
-          emptyHint="Active uploads and downloads appear here as they happen."
-        />
-      );
+      return <Transfers />;
     case "history":
       return (
         <Placeholder

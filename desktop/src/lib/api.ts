@@ -44,6 +44,11 @@ export interface AddFriendResult {
   delivered: boolean;
 }
 
+export interface SharedFolder {
+  id: string;
+  label?: string;
+}
+
 export interface AcceptFriendResult {
   device: Device;
   notified: boolean;
@@ -109,7 +114,13 @@ export interface ConflictDetails {
   remote_size?: number;
 }
 
-export class ApiError extends Error {}
+export class ApiError extends Error {
+  status?: number;
+  constructor(message: string, status?: number) {
+    super(message);
+    this.status = status;
+  }
+}
 
 interface DaemonInfo {
   base_url: string;
@@ -157,7 +168,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       const parsed = JSON.parse(msg) as { error?: unknown };
       if (typeof parsed?.error === "string" && parsed.error) msg = parsed.error;
     } catch {}
-    throw new ApiError(msg || `The engine returned an error (${res.status}).`);
+    throw new ApiError(msg || `The engine returned an error (${res.status}).`, res.status);
   }
   const text = await res.text();
   return (text ? JSON.parse(text) : undefined) as T;
@@ -182,6 +193,8 @@ export const api = {
   invite: () => request<Invite>("/invite"),
   addFriend: (code: string) =>
     request<AddFriendResult>("/friends", { method: "POST", body: JSON.stringify({ code }) }),
+  friendFolders: (id: string) =>
+    requestList<SharedFolder>(`/friends/${encodeURIComponent(id)}/folders`),
   friendRequests: () => requestList<FriendRequest>("/friend-requests"),
   acceptFriendRequest: (id: string) =>
     request<AcceptFriendResult>(`/friend-requests/${encodeURIComponent(id)}/accept`, {
