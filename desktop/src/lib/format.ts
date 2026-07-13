@@ -16,6 +16,11 @@ export function timeAgo(iso: string): string {
   return new Date(t).toLocaleDateString();
 }
 
+export function isZeroTime(iso: string): boolean {
+  const t = Date.parse(iso);
+  return Number.isNaN(t) || t <= 0;
+}
+
 export function isRecent(iso: string, withinMs = 5 * 60 * 1000): boolean {
   const t = Date.parse(iso);
   return !Number.isNaN(t) && Date.now() - t < withinMs;
