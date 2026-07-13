@@ -18,6 +18,14 @@ versioned independently of the desktop engine and lives on the `flutter` branch.
   monospace treatment for device identifiers.
 - App launcher icon (legacy and adaptive) — the linked-peers mark shared with
   the desktop app, generated with `flutter_launcher_icons`.
+
+### Fixed
+- The display name now reads **Syncy** everywhere it is shown (launcher label,
+  About, pairing copy), not a lowercase or "Mobile"-suffixed variant.
+- Cold start no longer flashes a white window on light-mode devices — the launch
+  window and status bar match the dark UI.
+- A failed pull-to-refresh now surfaces a friendly message instead of failing
+  silently; keyboard flow through the pairing form and list tap targets tightened.
 - Continuous integration: analyze, test, and per-architecture debug APK builds
   (`--split-per-abi`) uploaded as artifacts on every push and pull request.
 - Release workflow: tagging a `flutter` commit builds per-architecture release
