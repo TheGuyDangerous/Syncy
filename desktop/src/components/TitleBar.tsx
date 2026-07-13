@@ -55,10 +55,6 @@ export function TitleBar() {
         : null}
 
       <header className="titlebar" data-tauri-drag-region>
-        <div className="titlebar-brand" data-tauri-drag-region>
-          <span className="titlebar-mark">S</span>
-          <span className="titlebar-name">Syncy</span>
-        </div>
         <div className="titlebar-controls">
           <button
             className="win-btn"

@@ -55,6 +55,12 @@ const glyphs = {
     </>
   ),
   plus: <path d="M12 5.5v13M5.5 12h13" />,
+  copy: (
+    <>
+      <rect x="9" y="9" width="11" height="11" rx="2" />
+      <path d="M5 14.5H4.5A1.5 1.5 0 0 1 3 13V4.5A1.5 1.5 0 0 1 4.5 3H13a1.5 1.5 0 0 1 1.5 1.5V5" />
+    </>
+  ),
   trash: (
     <>
       <path d="M4.5 7h15" />

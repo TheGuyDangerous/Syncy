@@ -124,7 +124,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new ApiError(body.trim() || `The engine returned an error (${res.status}).`);
+    let msg = body.trim();
+    try {
+      const parsed = JSON.parse(msg) as { error?: unknown };
+      if (typeof parsed?.error === "string" && parsed.error) msg = parsed.error;
+    } catch {}
+    throw new ApiError(msg || `The engine returned an error (${res.status}).`);
   }
   const text = await res.text();
   return (text ? JSON.parse(text) : undefined) as T;
@@ -142,6 +147,10 @@ export const api = {
   removeFolder: (id: string) =>
     request<void>(`/folders/${encodeURIComponent(id)}`, { method: "DELETE" }),
   devices: () => requestList<Device>("/devices"),
+  pairDevice: (d: { id: string; name?: string }) =>
+    request<Device>("/devices", { method: "POST", body: JSON.stringify(d) }),
+  unpairDevice: (id: string) =>
+    request<void>(`/devices/${encodeURIComponent(id)}`, { method: "DELETE" }),
   conflicts: () => requestList<Conflict>("/conflicts"),
   versions: (folderId: string, relPath: string) =>
     requestList<FileVersion>(

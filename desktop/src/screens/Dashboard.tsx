@@ -1,6 +1,6 @@
 import { api, type Conflict, type Device, type Folder, type Status } from "../lib/api";
 import { useApi } from "../lib/useApi";
-import { isRecent, shortId, timeAgo } from "../lib/format";
+import { isRecent, isZeroTime, shortId, timeAgo } from "../lib/format";
 import { Screen } from "../components/Screen";
 import { Icon } from "../components/Icon";
 import { StatusDot, StatusPill } from "../components/StatusDot";
@@ -146,7 +146,11 @@ function Overview({ snapshot }: { snapshot: Snapshot }) {
                     </p>
                   </div>
                   <span className="row-meta">
-                    {active ? "Online" : `Seen ${timeAgo(d.last_seen)}`}
+                    {active
+                      ? "Online"
+                      : isZeroTime(d.last_seen)
+                        ? "Not seen yet"
+                        : `Seen ${timeAgo(d.last_seen)}`}
                   </span>
                 </li>
               );

@@ -4,6 +4,7 @@ import { useApi } from "../lib/useApi";
 import { formatBytes, timeAgo } from "../lib/format";
 import { Screen } from "../components/Screen";
 import { Icon } from "../components/Icon";
+import { Select } from "../components/Select";
 import { EmptyState } from "../components/EmptyState";
 import { Notice } from "../components/Notice";
 
@@ -49,23 +50,16 @@ export default function Versions() {
 
       <form className="card form-card" onSubmit={submit}>
         <div className="form-grid">
-          <label className="field">
+          <div className="field">
             <span className="field-label">Folder</span>
-            <select
-              className="input select"
+            <Select
               value={folderId}
-              onChange={(e) => setFolderId(e.target.value)}
-            >
-              <option value="">
-                {folders.loading && !folders.data ? "Loading folders…" : "Choose a folder"}
-              </option>
-              {(folders.data ?? []).map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.label || f.id}
-                </option>
-              ))}
-            </select>
-          </label>
+              onChange={setFolderId}
+              options={(folders.data ?? []).map((f) => ({ value: f.id, label: f.label || f.id }))}
+              ariaLabel="Folder"
+              placeholder={folders.loading && !folders.data ? "Loading folders…" : "Choose a folder"}
+            />
+          </div>
           <label className="field">
             <span className="field-label">File path</span>
             <input

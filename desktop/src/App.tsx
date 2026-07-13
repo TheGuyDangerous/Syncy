@@ -3,6 +3,7 @@ import { api } from "./lib/api";
 import { useApi } from "./lib/useApi";
 import { initTheme } from "./lib/theme";
 import { shortId } from "./lib/format";
+import { BrandMark } from "./components/BrandMark";
 import { Icon, type IconName } from "./components/Icon";
 import { StatusDot, type Tone } from "./components/StatusDot";
 import { TitleBar } from "./components/TitleBar";
@@ -131,7 +132,7 @@ export default function App() {
       <div className="shell">
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">S</div>
+          <BrandMark size={30} />
           <span className="wordmark">Syncy</span>
         </div>
         <nav className="nav" aria-label="Main">
