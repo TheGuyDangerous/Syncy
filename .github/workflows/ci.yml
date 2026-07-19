@@ -57,7 +57,7 @@ jobs:
 
       - name: Set up Go
         if: steps.detect.outputs.exists == 'true'
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           go-version-file: engine/go.mod
           cache-dependency-path: engine/go.sum
@@ -100,13 +100,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
 
       - uses: dtolnay/rust-toolchain@stable
 
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           go-version-file: engine/go.mod
           cache-dependency-path: engine/go.sum
