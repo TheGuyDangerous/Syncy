@@ -2,6 +2,10 @@
 
 # Syncy
 
+![Syncy desktop dashboard and folders interface](docs/images/syncy-desktop-banner.png)
+
+<sub>Captured from the running desktop app with sample folders and demo device data.</sub>
+
 **A fast, secure, local‑first peer‑to‑peer folder synchronization engine.**
 
 Keep your folders in sync across Windows, macOS, Linux and Android — with no cloud, no subscription and no one in the middle. Your data stays on your devices.
