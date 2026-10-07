@@ -4,7 +4,7 @@
 
 ![Syncy desktop dashboard and folders interface](docs/images/syncy-desktop-banner.png)
 
-<sub>Captured from the running desktop app with sample folders and demo device data.</sub>
+<sub>Syncy desktop dashboard and folder management.</sub>
 
 **A fast, secure, local‑first peer‑to‑peer folder synchronization engine.**
 
